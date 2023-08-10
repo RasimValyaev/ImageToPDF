@@ -1,12 +1,12 @@
 # программа переводит фото в текст
+
 # pip install pillow
 # pip install pytesseract
-import os
 
 # pip install torch torchvision torchaudio
 # pip install easyocr
 # pip install --force-reinstall -v "Pillow==9.5.0"
-
+import os
 import easyocr
 import re
 import time

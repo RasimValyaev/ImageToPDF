@@ -49,4 +49,5 @@ def image_2_pdf(file_path, file_name):
 
 
 if __name__ == '__main__':
+
     cycle_on_directory_files()

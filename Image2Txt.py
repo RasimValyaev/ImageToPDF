@@ -95,9 +95,9 @@ def convert_image2txt(file):
 
 def image_lists(folder):
     for file_name in os.listdir(folder):
-        print(folder, file_name)
         filename, file_extension = os.path.splitext(file_name.lower())
         if file_extension in ['.jpg', '.png', '.bmp']:
+            print(folder, file_name)
             unix_time = int(time.time())
             temp_file_name = os.path.join(folder, str(unix_time) + file_extension)
             if os.path.isfile(temp_file_name):
@@ -123,4 +123,4 @@ def image_lists(folder):
 
 
 if __name__ == '__main__':
-    image_lists(r'C:\Users\Rasim\Desktop\ЕСП\7\2023-08-08_133050')
+    image_lists(r'C:\Rasim\Python\ImageToPDF')

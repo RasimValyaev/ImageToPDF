@@ -1,18 +1,20 @@
+# -*- coding: utf-8 -*-
+
 # pip install Pillow
 import os
 
 from PIL import Image
 
-image_path_source = r'C:\Users\Rasim\Desktop\ЕСП\7\2023-08-08_143136'
 
 
-def cycle_on_directory_files():
+
+def cycle_on_directory_files_and_image_2_pdf(image_path_source):
     # цикл по папкам и файлам в папке pathName
     for root, dirs, files in os.walk(image_path_source):
         try:
             for i, name in enumerate(files):
                 filename, file_extension = os.path.splitext(name.lower())
-                if file_extension in ['.jpg', '.png', '.bmp'] and filename[:2] in ['рн', 'тт']:
+                if file_extension in ['.jpg', '.png', '.bmp'] and filename[:2] in ['рн', 'вн', 'тт']:
                     print(name)
                     image_2_pdf(image_path_source, image_path_source + r'\\' + name)
 
@@ -32,15 +34,13 @@ def image_2_pdf(file_path, file_name):
         new_path = os.path.join(file_path, 'PDF')
         if not os.path.exists(new_path):
             # папки нет. Создаем
-            os.mkdir(new_path)
+            os.makedirs(new_path)
 
-        new_file_path = os.path.join(file_path, 'PDF',base_name)
-
+        new_file_path = os.path.join(file_path, 'PDF', base_name)
 
         # Сохраняем файл в новой папке
         # new_image.save(new_path)
         # image_1 = Image.open(new_path)
-        # im_1 = image_1.convert('RGB')
         im_1 = image.convert('RGB')
         im_1.save(new_file_path.replace("jpg", "pdf"))
 
@@ -49,5 +49,5 @@ def image_2_pdf(file_path, file_name):
 
 
 if __name__ == '__main__':
-
-    cycle_on_directory_files()
+    image_path_source = r'C:\Rasim\Scan\2023-08-11_181648\ТOB ОІЛ ПРАЙМ ТРЕЙД'
+    cycle_on_directory_files_and_image_2_pdf(image_path_source)

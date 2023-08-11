@@ -39,7 +39,7 @@ def get_doc_type(txt_source):
     elif 'ВІДОМОСТІ ПРО ВАНТАЖ' in txt_source:
         doc_type = 'ТТН2'
     else:
-        txt_source = re.split("\s", txt_source[0].upper())
+        txt_source = re.split(r"\s", txt_source[0].upper())
         if txt_source[0] == 'ВИДАТКОВА':
             doc_type = 'ВН'
 
@@ -49,29 +49,31 @@ def get_doc_type(txt_source):
 def get_doc_number(txt_source, doc_type):
     doc_number = ''
     if doc_type == 'ВН':
-        txt_source = re.split("\s", txt_source[0])
+        txt_source = re.split(r"\s", txt_source[0])
         doc_number = txt_source[txt_source.index('Ng') + 1]
     elif doc_type == 'ТТН':
         doc_number = txt_source[5][3:]
     elif doc_type == 'ТТН2':
-        txt_source = re.split("\s", txt_source[29])
+        txt_source = re.split(r"\s", txt_source[29])
         doc_number = int(txt_source[txt_source.index('Ng') + 1])
 
-    doc_number = int(re.search("\d+", doc_number)[0])
+    doc_number = int(re.search(r"\d+", doc_number)[0])
     return f"{doc_number:05d}"
 
 
 def get_counterparty(txt_source, doc_type):
     try:
+        counterarty_index = 0
         if doc_type == 'ВН':
             for item in txt_source:
                 if '41098985' in item:
                     counterarty_index = txt_source.index(item)
+                    break
             return txt_source[counterarty_index + 2]
         elif doc_type == 'ТТН':
             return txt_source[46]
         elif doc_type == 'ТТН2':
-            return re.split("\s", txt_source[111])[0]
+            return re.split(r"\s", txt_source[111])[0]
 
     except Exception as e:
         print(str(e))
@@ -80,11 +82,11 @@ def get_counterparty(txt_source, doc_type):
 def get_doc_date(txt_source, doc_type):
     source = ''
     if doc_type == 'ВН':
-        source = re.split("\s", txt_source[0])
+        source = re.split(r"\s", txt_source[0])
     elif doc_type == 'ТТН':
-        source = re.split("\s", txt_source[6])
+        source = re.split(r"\s", txt_source[6])
     elif doc_type == 'ТТН2':
-        source = re.split("\s", txt_source[32])
+        source = re.split(r"\s", txt_source[32])
 
     if source != '':
         date = source[-4]
@@ -96,13 +98,13 @@ def get_doc_date(txt_source, doc_type):
         return ''
 
 
-def create_file_name(doc_type, get_doc_date, get_doc_number):
+def create_file_name(doc_type, doc_date, doc_number):
     postfix = ''
     if doc_type == 'ТТН2':
         doc_type = 'ТТН'
         postfix = '_1'
 
-    return '{} {} {}{}'.format(doc_type, get_doc_number, get_doc_date, postfix)
+    return '{} {} {}{}'.format(doc_type, doc_number, doc_date, postfix)
 
 
 def convert_image2txt(file):
@@ -118,7 +120,8 @@ def image_lists(folder):
             filename, file_extension = os.path.splitext(file_name.lower())
             if file_extension in ['.jpg', '.png', '.bmp']:
                 unix_time = int(time.time())
-                temp_file_name = os.path.join(folder, str(unix_time) + file_extension)
+                # temp_file_name = os.path.join(folder, str(unix_time) + file_extension)
+                temp_file_name = str(unix_time) + file_extension
                 print(folder, file_name, temp_file_name)
                 if os.path.isfile(temp_file_name):
                     os.remove(temp_file_name)
@@ -165,4 +168,4 @@ def image_lists(folder):
 
 
 if __name__ == '__main__':
-    image_lists(r'C:\Rasim\Scan\2023-08-11_181648')
+    image_lists(r'C:\Rasim\Scan\2023-08-11_181648\{жснкиф а')

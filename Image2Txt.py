@@ -188,7 +188,7 @@ def image_lists(folder):
 
                 file_with_path = os.path.join(new_folder, file_without_path)
 
-                if os.path.isfile(file_with_path) and count_double != 0:
+                if os.path.isfile(file_with_path):
                     # os.remove(file_with_path)
                     file_without_path = create_file_name(doc_type, doc_date,
                                                          doc_number) + '_' + str(count_double) + file_extension

@@ -49,5 +49,5 @@ def image_2_pdf(file_path, file_name):
 
 
 if __name__ == '__main__':
-    image_path_source = r'c:\Rasim\Python\ImageToPDF\ТОВ ОІЛ ПРАЙМ ТРЕЙД'
+    image_path_source = r'C:\Rasim\Scan\Rido\2023-08-15_162928'
     cycle_on_directory_files_and_image_2_pdf(image_path_source)

@@ -177,8 +177,6 @@ def image_lists(folder):
 
                 doc_type, doc_date, doc_number, counterparty = image_read(temp_file_name)
                 file_without_path = create_file_name(doc_type, doc_date, doc_number).upper()
-                # if filename.upper() == file_without_path:
-                #     continue
                 file_without_path = file_without_path + file_extension
                 # moving image to counterparty_folder, before converting to pdf
                 new_folder = sanitize_filepath(os.path.join(folder, counterparty))
@@ -207,8 +205,5 @@ def image_lists(folder):
             continue
 
 
-# cycle_on_directory_files_and_image_2_pdf(counterparty_folder)
-
-
 if __name__ == '__main__':
-    image_lists(r'C:\Users\Rasim\Desktop\ЕСП\7\2023-08-08_143136')
+    image_lists(r'C:\Rasim\Scan\Rido\2023-08-15_162928')

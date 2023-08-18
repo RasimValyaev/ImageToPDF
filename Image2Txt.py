@@ -15,6 +15,7 @@ import easyocr
 import re
 import time
 import traceback
+from datetime import datetime
 import cyrtranslit  # translating ua word to latin. need to the path
 import shutil
 import psycopg2
@@ -64,6 +65,15 @@ def get_unix_time(timestamp):
     return int(time.mktime(time.strptime(timestamp, '%d.%m.%Y %H:%M:%S')))
 
 
+def create_file_name(doc_type, doc_date, doc_number):
+    postfix = ''
+    if doc_type == 'ТТН2':
+        doc_type = 'ТТН'
+        postfix = '_1'
+
+    return '{} {} {}{}'.format(doc_type, doc_number, doc_date, postfix)
+
+
 def get_doc_type(txt_source):
     doc_type = ''
     for item in txt_source:
@@ -76,54 +86,62 @@ def get_doc_type(txt_source):
             doc_type = 'ТТН2'
 
         if doc_type != '':
-            return doc_type, txt_source.index(item)
+            return doc_type
 
 
-def get_doc_number(txt_source, doc_type, indexdoc_type):
-    doc_number = ''
-    if doc_type == 'ВН':
-        txt_source = re.split(r"\s", txt_source[indexdoc_type])
-        doc_number = txt_source[txt_source.index('Ng') + 1]
-    elif doc_type == 'ТТН':
-        doc_number = txt_source[indexdoc_type + 5][3:]
-    elif doc_type == 'ТТН2':
-        txt_source = re.split(r"\s", txt_source[indexdoc_type + 29])
-        doc_number = int(txt_source[txt_source.index('Ng') + 1])
+def get_doc_number(txt_source):
+    doc_number = 0
+    for item in txt_source:
+        if 'ng' in item.lower():
+            doc_number = re.split(r"\s", item.lower())
+            if len(doc_number) == 2:
+                doc_number = int(re.search(r"\d+", doc_number[1])[0])
+                break
 
-    doc_number = int(re.search(r"\d+", doc_number)[0])
+    if doc_number == 0:
+        print('Не определился номер док', txt_source)
+
     return f"{doc_number:05d}"
 
 
-def get_doc_date(txt_source, doc_type, doc_type_index):
+def get_doc_date(txt_source):
     source = ''
-    if doc_type == 'ВН':
-        source = re.split(r"\s", txt_source[doc_type_index])
-    elif doc_type == 'ТТН':
-        source = re.split(r"\s", txt_source[doc_type_index + 6])
-    elif doc_type == 'ТТН2':
-        source = re.split(r"\s", txt_source[doc_type_index + 32])
-
+    date_doc = ''
     try:
-        if source != '':
-            date = source[-4]
-            month = source[-3].upper()
-            month = ger_correct_month(month)
-            month_index = MONTH.index(month) + 1
-            year = source[-2]
-            return date + '.' + f"{month_index:02d}" + '.' + year
-        else:
-            return ''
+        for item in txt_source:
+            if 'року' in item:
+                source = re.split(r"\s", item.lower())
+                if len(source) == 4:
+                    date = source[-4]
+                    month = source[-3].upper()
+                    month = ger_correct_month(month)
+                    month_index = MONTH.index(month) + 1
+                    if date == '98':
+                        date = '08'
+                    elif date not in range(1, 31):
+                        print('Дата должна быть в интервале от 1 до 31', date)
+                        break
+
+                    year = source[-2]
+                    if int(year) < 2020:
+                        print('Год должен быть больше 2020', year)
+                        break
+
+                    date_doc = date + '.' + f"{month_index:02d}" + '.' + year
+                    date_doc = datetime.strptime(date_doc, '%d.%m.%Y')
+                    date_doc = datetime.strftime(date_doc, '%d.%m.%Y')
+                    break
+
+        if date_doc == '':
+            print('Не нашел данных по дате', txt_source)
+
     except Exception as e:
+        date_doc = ''
+        print('ошибка при преобразовании в дату', source)
         print(str(e))
 
-
-def create_file_name(doc_type, doc_date, doc_number):
-    postfix = ''
-    if doc_type == 'ТТН2':
-        doc_type = 'ТТН'
-        postfix = '_1'
-
-    return '{} {} {}{}'.format(doc_type, doc_number, doc_date, postfix)
+    finally:
+        return date_doc
 
 
 def convert_image2txt(file):
@@ -146,9 +164,11 @@ def get_counterparty(doc_date, doc_number):
 def image_read(temp_file_name):
     try:
         result = convert_image2txt(temp_file_name)
-        doc_type, doc_type_index = get_doc_type(result)
-        doc_date = get_doc_date(result, doc_type, doc_type_index)
-        doc_number = get_doc_number(result, doc_type, doc_type_index)
+        doc_type = get_doc_type(result)
+        doc_number = get_doc_number(result)
+        doc_date = get_doc_date(result)
+        if doc_date == '':
+            return ''
         counterparty = get_counterparty(doc_date, doc_number)
         print(counterparty)
         return doc_type, doc_date, doc_number, counterparty

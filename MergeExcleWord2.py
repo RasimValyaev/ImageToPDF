@@ -59,8 +59,8 @@ def merge_excel_and_word(path_to_file_excel):
 
         pdf_file = fr'C:\Users\Rasim\Desktop\Scan\{i + 1}.pdf'
         word_2_pdf(word_file, pdf_file)
-        if i == 10:
-            break
+        # if i == 10:
+        #     break
 
 
 def get_contract(search_doc, list_doc):

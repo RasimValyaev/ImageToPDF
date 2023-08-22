@@ -1,9 +1,10 @@
 # python -m pip install -U pip setuptools
 # pip install pandas
-# pip install mailmerge
+# pip install mailmerge - не нужен
 # pip install docx-mailmerge
 # pip install xlrd
-# pip install xlwt
+# pip install pathvalidate
+# pip install xlwt - не нужен
 # https://archit-narain.medium.com/how-to-merge-tables-to-word-documents-using-python-9786124a276b
 # https://pbpython.com/python-word-template.html
 
@@ -18,7 +19,6 @@ from Counterparty import get_counterparty, get_list_of_tax_fatura, get_contract_
 from Word2Pdf import word_2_pdf
 import xlrd
 import os.path
-from docxtpl import DocxTemplate
 
 MONTH = ['СІЧНЯ', 'ЛЮТОГО', 'БЕРЕЗНЯ', 'КВІТНЯ', 'ТРАВНЯ', 'ЧЕРВНЯ', 'ЛИПНЯ', 'СЕРПНЯ', 'ВЕРЕСНЯ', 'ЖОВТНЯ',
          'ЛИСТОПАДА', 'ГРУДНЯ']
@@ -104,7 +104,7 @@ def merge_excel_and_word(path_to_file_excel):
     df = pandas.read_excel(path_to_file_excel, sheet_name='df')
     df = df.astype(str)
     dirname = os.path.dirname(file_source)
-    template = os.path.join(dirname, 'maket.docx')
+    template = os.path.join(dirname, 'MaketFinal.docx.docx')
 
     for i, row in df.iterrows():
         document = MailMerge(template)
@@ -124,7 +124,7 @@ def merge_excel_and_word(path_to_file_excel):
             doc_sale_date=row['датаРеализации'],
             contracte_count_days=row['договорДней'],
             counterpary=row['контрагент1С'],
-            row=str(i + 1),
+            row=f"{i + 1:02d}",
             report_date='{:%d.%m.%Y}'.format(datetime.today())
         )
 

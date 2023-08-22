@@ -6,8 +6,6 @@ import os
 from PIL import Image
 
 
-
-
 def cycle_on_directory_files_and_image_2_pdf(image_path_source):
     # цикл по папкам и файлам в папке pathName
     for root, dirs, files in os.walk(image_path_source):

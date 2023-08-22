@@ -16,7 +16,6 @@ import re
 import time
 import traceback
 from datetime import datetime
-import cyrtranslit  # translating ua word to latin. need to the path
 import shutil
 import psycopg2
 from pathvalidate import sanitize_filepath  # deleting incorrect characters in file path

@@ -12,6 +12,7 @@ from datetime import datetime
 from mailmerge import MailMerge
 from Counterparty import get_counterparty, get_list_of_tax_fatura, get_contract_details, get_doc_sale_details
 from Word2Pdf import word_2_pdf
+from docxtpl import DocxTemplate
 
 MONTH = ['СІЧНЯ', 'ЛЮТОГО', 'БЕРЕЗНЯ', 'КВІТНЯ', 'ТРАВНЯ', 'ЧЕРВНЯ', 'ЛИПНЯ', 'СЕРПНЯ', 'ВЕРЕСНЯ', 'ЖОВТНЯ',
          'ЛИСТОПАДА', 'ГРУДНЯ']
@@ -85,46 +86,55 @@ def add_doc_contract_details_to_df(df):
 
 
 def merge_excel_and_word(path_to_file_excel):
-    dfnew = pd.DataFrame()
-    df = pandas.read_excel(path_to_file_excel, sheet_name=0)
-    df['counterparty'] = None
-    df['Дата складання ПН/РК'] = df['Дата складання ПН/РК'].dt.strftime('%d.%m.%Y')
-    df['Дата реєстрації ПН/РК в ЄРПН'] = df['Дата реєстрації ПН/РК в ЄРПН'].dt.strftime('%d.%m.%Y')
+    df = pandas.read_excel(path_to_file_excel, sheet_name='df')
+    df = df.astype(str)
     for i, row in df.iterrows():
-        df_list = []
-        data = {}
-        tax_code = row['ІПН Покупця']
-        client_name = get_counterparty(tax_code)
-        print(client_name)
-        dfnew.loc[df['ІПН Покупця'] == row['ІПН Покупця'], 'counterparty'] = client_name
-        df_list.append(row.to_dict())  # row.to_json(orient='records')
-        data['columns'] = df_list
 
-        document.merge(
-            status='Gold',
-            city='Springfield',
-            phone_number='800-555-5555',
-            Business='Cool Shoes',
-            zip='55555',
-            purchases='$500,000',
-            shipping_limit='$500',
-            state='MO',
-            address='1234 Main Street',
-            date='{:%d.%b.%Y}'.format(datetime.today()),
-            discount='5%',
-            recipient='Mr. Jones')
-
-        template = r'C:\Users\Rasim\Desktop\Scan\tax.docx'
+        template = r'C:\Users\Rasim\Desktop\Scan\maket.docx'
         document = MailMerge(template)
+        print(document.get_merge_fields())
+        context = {'reg_number': row['Реєстраційний_номер'],
+                   'doc_tax_number': row['Порядковий_№_ПН/РК'],
+                   'doc_tax_date': row['Дата_складання_ПН/РК'],
+                   'counterparty_code': row['Податковий_номер_Покупця'],
+                   'counterpary': row['контрагент1С'],
+                   'sum_sale': row['Обсяг_операцій'],
+                   'sum_tax': row['Сумв_ПДВ'],
+                   'contracte_number': row['договорНомер'],
+                   'contracte_date': row['договорДата'],
+                   'doc_sale_month': row['месяц'],
+                   'doc_sale_year': row['год'],
+                   'doc_sale_number': row['номерРеализации'],
+                   'doc_sale_date': row['датаРеализации'],
+                   'contracte_count_days': row['договорДней']
+                   }
+        word_file = fr'C:\Users\Rasim\Desktop\Scan\{row["filename"]}.docx'
+        pdf_file = fr'C:\Users\Rasim\Desktop\Scan\{row["filename"]}.pdf'
+        # doc = DocxTemplate(template)
+        # doc.render(context)
+        # doc.save(word_file)
+        document.merge(
+            reg_number=row['Реєстраційний_номер'],
+            doc_tax_number=row['Порядковий_№_ПН/РК'],
+            doc_tax_date=row['Дата_складання_ПН/РК'],
+            counterparty_code=row['Податковий_номер_Покупця'],
+            sum_sale=row['Обсяг_операцій'].replace(".",","),
+            sum_tax=row['Сумв_ПДВ'].replace(".",","),
+            contracte_number=row['договорНомер'],
+            contracte_date=row['договорДата'],
+            doc_sale_month=row['месяц'].lower(),
+            doc_sale_year=row['год'],
+            doc_sale_number=row['номерРеализации'],
+            doc_sale_date=row['датаРеализации'],
+            contracte_count_days=row['договорДней'],
+            counterpary=row['контрагент1С'],
+            row=str(i + 1),
+            report_date='{:%d.%m.%Y}'.format(datetime.today())
+        )
 
-        document.merge_rows('tax_number', data['columns'])
-        document.merge_rows('tax_date', data['columns'])
-        word_file = fr'C:\Users\Rasim\Desktop\Scan\{i + 1}.docx'
         document.write(word_file)  # saving file
-
-        pdf_file = fr'C:\Users\Rasim\Desktop\Scan\{i + 1}.pdf'
         word_2_pdf(word_file, pdf_file)
-        if i == 10:
+        if i == 4:
             break
 
 
@@ -148,19 +158,31 @@ def add_doc_sale_details_to_df(df):
     return df
 
 
+def get_valide_columns(df):
+    new_columns = []
+    for column in df.columns:
+        valide_column_name = sanitize_filepath(column)
+        valide_column_name = valide_column_name.replace(" ", "_")
+        new_columns.append(valide_column_name)
+
+    df.columns = new_columns
+    return df
+
+
 if __name__ == '__main__':
     file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
-    df = add_counterparty_name_to_df(file_source)
-    df = add_doc_tax_details_to_df(df)
-    df = add_doc_sale_details_to_df(df)
-    df = add_doc_contract_details_to_df(df)
-    df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
-    df['filename'] = df.index + 1
-    df.astype(str)
-    df['filename'] = pd.concat(["Лист пояснення " + df['filename'].astype(str) + " до " + df[
-        r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str) + ".docx"])
-    with pd.ExcelWriter(file_source, mode='a') as writer:
-        df.to_excel(writer, sheet_name='df', index=False)
-
-    print(df)
-    # merge_excel_and_word(file_source)
+    # df = add_counterparty_name_to_df(file_source)
+    # df = add_doc_tax_details_to_df(df)
+    # df = add_doc_sale_details_to_df(df)
+    # df = add_doc_contract_details_to_df(df)
+    # df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
+    # df['filename'] = df.index + 1
+    # df.astype(str)
+    # df['filename'] = pd.concat(["Лист пояснення " + df['filename'].astype(str) + " до " + df[
+    #     r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str) + ".docx"])
+    # df = get_valide_columns(df)
+    # with pd.ExcelWriter(file_source, mode='a') as writer:
+    #     df.to_excel(writer, sheet_name='df', index=False)
+    #
+    # print(df)
+    merge_excel_and_word(file_source)

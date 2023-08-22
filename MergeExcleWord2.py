@@ -7,6 +7,7 @@
 import pandas
 import re
 import pandas as pd
+from pathvalidate import sanitize_filepath
 from datetime import datetime
 from mailmerge import MailMerge
 from Counterparty import get_counterparty, get_list_of_tax_fatura, get_contract_details, get_doc_sale_details
@@ -154,9 +155,12 @@ if __name__ == '__main__':
     df = add_doc_sale_details_to_df(df)
     df = add_doc_contract_details_to_df(df)
     df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
+    df['filename'] = df.index + 1
+    df.astype(str)
+    df['filename'] = pd.concat(["Лист пояснення " + df['filename'].astype(str) + " до " + df[
+        r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str) + ".docx"])
     with pd.ExcelWriter(file_source, mode='a') as writer:
-        date = datetime.today().strftime("%d.%m.%Y")
-        df.to_excel(writer, sheet_name=date, index=False)
+        df.to_excel(writer, sheet_name='df', index=False)
 
     print(df)
     # merge_excel_and_word(file_source)

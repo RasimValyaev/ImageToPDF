@@ -1,7 +1,9 @@
+# python -m pip install -U pip setuptools
 # pip install pandas
 # pip install mailmerge
 # pip install docx-mailmerge
 # pip install xlrd
+# pip install xlwt
 # https://archit-narain.medium.com/how-to-merge-tables-to-word-documents-using-python-9786124a276b
 # https://pbpython.com/python-word-template.html
 
@@ -30,12 +32,13 @@ def add_counterparty_name_to_df(path_to_file_excel):
 
     if df['Дата складання ПН/РК'].dtype == 'int64':
         df["Дата складання ПН/РК"] = df["Дата складання ПН/РК"].map(lambda x: datetime(*xlrd.xldate_as_tuple(x, 0)))
-        df["Дата складання ПН/РК"] = pd.to_datetime(df["Дата складання ПН/РК"]).dt.strftime('%d.%m.%Y')
+
+    df["Дата складання ПН/РК"] = pd.to_datetime(df["Дата складання ПН/РК"]).dt.strftime('%d.%m.%Y')
 
     if df['Дата складання ПН/РК'].dtype == 'int64':
         df["Дата реєстрації ПН/РК в ЄРПН"] = df["Дата реєстрації ПН/РК в ЄРПН"].map(
             lambda x: datetime(*xlrd.xldate_as_tuple(x, 0)))
-        df["Дата реєстрації ПН/РК в ЄРПН"] = pd.to_datetime(df["Дата реєстрації ПН/РК в ЄРПН"]).dt.strftime('%d.%m.%Y')
+    df["Дата реєстрації ПН/РК в ЄРПН"] = pd.to_datetime(df["Дата реєстрації ПН/РК в ЄРПН"]).dt.strftime('%d.%m.%Y')
 
     set_customer_codes = df['Податковий номер Покупця'].unique().tolist()
 
@@ -135,9 +138,9 @@ def merge_excel_and_word(path_to_file_excel):
 
         document.write(word_file)  # saving file
         word_2_pdf(word_file, pdf_file)
-        # os.remove(word_file)
-        if i == 4:
-            break
+        os.remove(word_file)
+        # if i == 4:
+        #     break
 
 
 def add_doc_sale_details_to_df(df):
@@ -172,18 +175,19 @@ def get_valide_columns(df):
 
 
 if __name__ == '__main__':
-    file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
-    # df = add_counterparty_name_to_df(file_source)
-    # df = add_doc_tax_details_to_df(df)
-    # df = add_doc_sale_details_to_df(df)
-    # df = add_doc_contract_details_to_df(df)
-    # df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
-    # df['filename'] = df.index + 1
-    # df.astype(str)
-    # df['filename'] = pd.concat(["Лист пояснення " + df['filename'].astype(str) + " до " + df[
-    #     r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str)])
-    # df = get_valide_columns(df)
-    # with pd.ExcelWriter(file_source, mode='a') as writer:
-    #     df.to_excel(writer, sheet_name='df', index=False)
+    # file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
+    file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЛЕГІОН 2015\Написать письмо\Копия ЛЕГІОН 2015.xlsx"
+    df = add_counterparty_name_to_df(file_source)
+    df = add_doc_tax_details_to_df(df)
+    df = add_doc_sale_details_to_df(df)
+    df = add_doc_contract_details_to_df(df)
+    df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
+    df['filename'] = df.index + 1
+    df.astype(str)
+    df['filename'] = pd.concat(["Лист пояснення " + df['filename'].astype(str) + " до " + df[
+        r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str)])
+    df = get_valide_columns(df)
+    with pd.ExcelWriter(file_source, mode='a', if_sheet_exists='replace') as writer:
+        df.to_excel(writer, sheet_name='df', index=False)
 
     merge_excel_and_word(file_source)

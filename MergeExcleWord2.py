@@ -15,6 +15,7 @@ from mailmerge import MailMerge
 from Counterparty import get_counterparty, get_list_of_tax_fatura, get_contract_details, get_doc_sale_details
 from Word2Pdf import word_2_pdf
 import xlrd
+import os.path
 from docxtpl import DocxTemplate
 
 MONTH = ['СІЧНЯ', 'ЛЮТОГО', 'БЕРЕЗНЯ', 'КВІТНЯ', 'ТРАВНЯ', 'ЧЕРВНЯ', 'ЛИПНЯ', 'СЕРПНЯ', 'ВЕРЕСНЯ', 'ЖОВТНЯ',
@@ -101,11 +102,10 @@ def merge_excel_and_word(path_to_file_excel):
     df = df.astype(str)
     dirname = os.path.dirname(file_source)
     template = os.path.join(dirname, 'maket.docx')
-    document = MailMerge(template)
-    print(document.get_merge_fields())
 
     for i, row in df.iterrows():
-
+        document = MailMerge(template)
+        # print(document.get_merge_fields())
         document.merge(
             reg_number=row['Реєстраційний_номер'],
             doc_tax_number=row['Порядковий_№_ПН/РК'],
@@ -125,16 +125,17 @@ def merge_excel_and_word(path_to_file_excel):
             report_date='{:%d.%m.%Y}'.format(datetime.today())
         )
 
-        save_to_dir = sanitize_filepath(os.path.join(dirname, row['контрагент1С']))
+        save_to_dir = (os.path.join(dirname, sanitize_filepath(row['контрагент1С'])))
         if not os.path.isdir(save_to_dir):
             os.mkdir(save_to_dir)
 
-        word_file = f'{i+1}.docx'
-        pdf_file = save_to_dir + fr'/{row["filename"]}.pdf'
+        # word_file = save_to_dir + fr'/{i + 1}.docx'
+        word_file = os.path.join(save_to_dir, fr'{row["filename"]}.docx')
+        pdf_file = os.path.join(save_to_dir, fr'{row["filename"]}.pdf')
 
         document.write(word_file)  # saving file
         word_2_pdf(word_file, pdf_file)
-        os.remove(word_file)
+        # os.remove(word_file)
         if i == 4:
             break
 

@@ -2,11 +2,16 @@ import win32com.client as win32
 
 
 def word_2_pdf(in_file_word, out_file_pdf):
-    word = win32.DispatchEx("Word.Application")
-    doc = word.Documents.Open(in_file_word)
-    doc.SaveAs(out_file_pdf, FileFormat=17)
-    doc.Close()
-    word.Quit()
+    try:
+        word = win32.DispatchEx("Word.Application")
+        doc = word.Documents.Open(in_file_word)
+        doc.SaveAs(out_file_pdf, FileFormat=17)
+        doc.Close()
+        word.Quit()
+
+    except Exception as e:
+        print(str(e))
+        pass
 
 
 if __name__ == '__main__':

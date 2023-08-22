@@ -107,6 +107,7 @@ def merge_excel_and_word(path_to_file_excel):
     template = os.path.join(dirname, 'MaketFinal.docx.docx')
 
     for i, row in df.iterrows():
+        record_number = f"{i + 1:05d}"
         document = MailMerge(template)
         # print(document.get_merge_fields())
         document.merge(
@@ -124,7 +125,7 @@ def merge_excel_and_word(path_to_file_excel):
             doc_sale_date=row['датаРеализации'],
             contracte_count_days=row['договорДней'],
             counterpary=row['контрагент1С'],
-            row=f"{i + 1:02d}",
+            row=record_number,
             report_date='{:%d.%m.%Y}'.format(datetime.today())
         )
 

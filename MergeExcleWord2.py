@@ -15,6 +15,7 @@ from Word2Pdf import word_2_pdf
 MONTH = ['СІЧНЯ', 'ЛЮТОГО', 'БЕРЕЗНЯ', 'КВІТНЯ', 'ТРАВНЯ', 'ЧЕРВНЯ', 'ЛИПНЯ', 'СЕРПНЯ', 'ВЕРЕСНЯ', 'ЖОВТНЯ',
          'ЛИСТОПАДА', 'ГРУДНЯ']
 
+
 def add_counterparty_name_to_df(path_to_file_excel):
     # added to df counterparty name and code
     df = pandas.read_excel(path_to_file_excel, sheet_name=0)
@@ -33,23 +34,51 @@ def add_counterparty_name_to_df(path_to_file_excel):
     return df
 
 
+def get_contract(search_doc, list_doc):
+    # за день выписано много НН (налогов накл)
+    # df содержить их короткие номера.
+    # функция по короткому номеру возвращает полный
+    for item in list_doc:
+        if str(search_doc) in item['Number']:
+            return item
+
+
 def add_doc_tax_details_to_df(df):
     # Search uuid_contracte by date fatura and client_uuid
     df['contract_key'] = None
     df['doc_sale_key'] = None
     df['номерНН_оригинал'] = None
     for i, row in df.iterrows():
-        date_fatura = row['Дата складання ПН/РК']
+        date_doc_tax = row['Дата складання ПН/РК']
         client_uuid = row['контрагент1Сuuid']
-        list_of_fatura = get_list_of_tax_fatura(date_fatura, client_uuid)
-        tax_doc = get_contract(row['Порядковий № ПН/РК'], list_of_fatura)
-        df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'номерНН_оригинал'] = tax_doc['Number']
-        df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'doc_sale_key'] = tax_doc[
+        list_of_fatura = get_list_of_tax_fatura(date_doc_tax, client_uuid)
+        tax_doc_details = get_contract(row['Порядковий № ПН/РК'], list_of_fatura)
+        df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'номерНН_оригинал'] = tax_doc_details['Number']
+        df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'doc_sale_key'] = tax_doc_details[
             'ДокументОснование']
-        df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'contract_key'] = tax_doc[
+        df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'contract_key'] = tax_doc_details[
             'ДоговорКонтрагента_Key']
 
-        print(row['Порядковий № ПН/РК'], tax_doc)
+        print(row['Порядковий № ПН/РК'], tax_doc_details)
+
+    return df
+
+
+def add_doc_contract_details_to_df(df):
+    df['договорДней'] = None
+    df['договорДата'] = None
+    df['договорНомер'] = None
+    df['договор'] = None
+    set_contract_key = df['contract_key'].unique().tolist()
+
+    for contract_key in set_contract_key:
+        contract_details = get_contract_details(contract_key)  # Description,_НКС_ДнівВідтермінуванняОплати,Номер,Дата
+        print(contract_details)
+        contract_date = datetime.strptime(contract_details['Дата'], "%Y-%m-%dT%H:%M:%S").strftime("%d.%m.%Y")
+        df.loc[df['contract_key'] == contract_key, 'договорДней'] = contract_details['_НКС_ДнівВідтермінуванняОплати']
+        df.loc[df['contract_key'] == contract_key, 'договорДата'] = contract_date
+        df.loc[df['contract_key'] == contract_key, 'договорНомер'] = contract_details['Номер']
+        df.loc[df['contract_key'] == contract_key, 'договор'] = contract_details['Description']
 
     return df
 
@@ -98,12 +127,6 @@ def merge_excel_and_word(path_to_file_excel):
             break
 
 
-def get_contract(search_doc, list_doc):
-    for item in list_doc:
-        if str(search_doc) in item['Number']:
-            return item
-
-
 def add_doc_sale_details_to_df(df):
     df['год'] = None
     df['месяц'] = None
@@ -112,9 +135,10 @@ def add_doc_sale_details_to_df(df):
     for i, row in df.iterrows():
         doc_sale_uuid = row['doc_sale_key']
         doc_sale_details = get_doc_sale_details(doc_sale_uuid)
-        doc_sale_month_idx = datetime.strptime(doc_sale_details['Date'],"%Y-%m-%dT%H:%M:%S").month
+        doc_sale_month_idx = datetime.strptime(doc_sale_details['Date'], "%Y-%m-%dT%H:%M:%S").month
         doc_sale_month = MONTH[doc_sale_month_idx - 1]
-        df.loc[df['doc_sale_key'] == row['doc_sale_key'], 'номерРеализации'] = int(re.findall(r"\d*",doc_sale_details['Number'])[2])
+        df.loc[df['doc_sale_key'] == row['doc_sale_key'], 'номерРеализации'] = int(
+            re.findall(r"\d*", doc_sale_details['Number'])[2])
         df.loc[df['doc_sale_key'] == row['doc_sale_key'], 'датаРеализации'] = doc_sale_details['Date']
         df.loc[df['doc_sale_key'] == row['doc_sale_key'], 'месяц'] = doc_sale_month
 
@@ -128,6 +152,8 @@ if __name__ == '__main__':
     df = add_counterparty_name_to_df(file_source)
     df = add_doc_tax_details_to_df(df)
     df = add_doc_sale_details_to_df(df)
+    df = add_doc_contract_details_to_df(df)
+    df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
     with pd.ExcelWriter(file_source, mode='a') as writer:
         date = datetime.today().strftime("%d.%m.%Y")
         df.to_excel(writer, sheet_name=date, index=False)

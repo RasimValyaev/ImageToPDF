@@ -1,17 +1,20 @@
 # pip install pandas
 # pip install mailmerge
 # pip install docx-mailmerge
+# pip install xlrd
 # https://archit-narain.medium.com/how-to-merge-tables-to-word-documents-using-python-9786124a276b
 # https://pbpython.com/python-word-template.html
 
 import pandas
 import re
+import os
 import pandas as pd
 from pathvalidate import sanitize_filepath
 from datetime import datetime
 from mailmerge import MailMerge
 from Counterparty import get_counterparty, get_list_of_tax_fatura, get_contract_details, get_doc_sale_details
 from Word2Pdf import word_2_pdf
+import xlrd
 from docxtpl import DocxTemplate
 
 MONTH = ['СІЧНЯ', 'ЛЮТОГО', 'БЕРЕЗНЯ', 'КВІТНЯ', 'ТРАВНЯ', 'ЧЕРВНЯ', 'ЛИПНЯ', 'СЕРПНЯ', 'ВЕРЕСНЯ', 'ЖОВТНЯ',
@@ -23,8 +26,16 @@ def add_counterparty_name_to_df(path_to_file_excel):
     df = pandas.read_excel(path_to_file_excel, sheet_name=0)
     df['контрагент1С'] = None
     df['контрагент1Сuuid'] = None
-    df['Дата складання ПН/РК'] = pd.to_datetime(df['Дата складання ПН/РК']).dt.strftime('%d.%m.%Y')
-    df['Дата реєстрації ПН/РК в ЄРПН'] = pd.to_datetime(df['Дата реєстрації ПН/РК в ЄРПН']).dt.strftime('%d.%m.%Y')
+
+    if df['Дата складання ПН/РК'].dtype == 'int64':
+        df["Дата складання ПН/РК"] = df["Дата складання ПН/РК"].map(lambda x: datetime(*xlrd.xldate_as_tuple(x, 0)))
+        df["Дата складання ПН/РК"] = pd.to_datetime(df["Дата складання ПН/РК"]).dt.strftime('%d.%m.%Y')
+
+    if df['Дата складання ПН/РК'].dtype == 'int64':
+        df["Дата реєстрації ПН/РК в ЄРПН"] = df["Дата реєстрації ПН/РК в ЄРПН"].map(
+            lambda x: datetime(*xlrd.xldate_as_tuple(x, 0)))
+        df["Дата реєстрації ПН/РК в ЄРПН"] = pd.to_datetime(df["Дата реєстрації ПН/РК в ЄРПН"]).dt.strftime('%d.%m.%Y')
+
     set_customer_codes = df['Податковий номер Покупця'].unique().tolist()
 
     for tax_code in set_customer_codes:
@@ -88,38 +99,20 @@ def add_doc_contract_details_to_df(df):
 def merge_excel_and_word(path_to_file_excel):
     df = pandas.read_excel(path_to_file_excel, sheet_name='df')
     df = df.astype(str)
+    dirname = os.path.dirname(file_source)
+    template = os.path.join(dirname, 'maket.docx')
+    document = MailMerge(template)
+    print(document.get_merge_fields())
+
     for i, row in df.iterrows():
 
-        template = r'C:\Users\Rasim\Desktop\Scan\maket.docx'
-        document = MailMerge(template)
-        print(document.get_merge_fields())
-        context = {'reg_number': row['Реєстраційний_номер'],
-                   'doc_tax_number': row['Порядковий_№_ПН/РК'],
-                   'doc_tax_date': row['Дата_складання_ПН/РК'],
-                   'counterparty_code': row['Податковий_номер_Покупця'],
-                   'counterpary': row['контрагент1С'],
-                   'sum_sale': row['Обсяг_операцій'],
-                   'sum_tax': row['Сумв_ПДВ'],
-                   'contracte_number': row['договорНомер'],
-                   'contracte_date': row['договорДата'],
-                   'doc_sale_month': row['месяц'],
-                   'doc_sale_year': row['год'],
-                   'doc_sale_number': row['номерРеализации'],
-                   'doc_sale_date': row['датаРеализации'],
-                   'contracte_count_days': row['договорДней']
-                   }
-        word_file = fr'C:\Users\Rasim\Desktop\Scan\{row["filename"]}.docx'
-        pdf_file = fr'C:\Users\Rasim\Desktop\Scan\{row["filename"]}.pdf'
-        # doc = DocxTemplate(template)
-        # doc.render(context)
-        # doc.save(word_file)
         document.merge(
             reg_number=row['Реєстраційний_номер'],
             doc_tax_number=row['Порядковий_№_ПН/РК'],
             doc_tax_date=row['Дата_складання_ПН/РК'],
             counterparty_code=row['Податковий_номер_Покупця'],
-            sum_sale=row['Обсяг_операцій'].replace(".",","),
-            sum_tax=row['Сумв_ПДВ'].replace(".",","),
+            sum_sale=row['Обсяг_операцій'].replace(".", ","),
+            sum_tax=row['Сумв_ПДВ'].replace(".", ","),
             contracte_number=row['договорНомер'],
             contracte_date=row['договорДата'],
             doc_sale_month=row['месяц'].lower(),
@@ -132,8 +125,16 @@ def merge_excel_and_word(path_to_file_excel):
             report_date='{:%d.%m.%Y}'.format(datetime.today())
         )
 
+        save_to_dir = sanitize_filepath(os.path.join(dirname, row['контрагент1С']))
+        if not os.path.isdir(save_to_dir):
+            os.mkdir(save_to_dir)
+
+        word_file = f'{i+1}.docx'
+        pdf_file = save_to_dir + fr'/{row["filename"]}.pdf'
+
         document.write(word_file)  # saving file
         word_2_pdf(word_file, pdf_file)
+        os.remove(word_file)
         if i == 4:
             break
 
@@ -179,10 +180,9 @@ if __name__ == '__main__':
     # df['filename'] = df.index + 1
     # df.astype(str)
     # df['filename'] = pd.concat(["Лист пояснення " + df['filename'].astype(str) + " до " + df[
-    #     r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str) + ".docx"])
+    #     r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str)])
     # df = get_valide_columns(df)
     # with pd.ExcelWriter(file_source, mode='a') as writer:
     #     df.to_excel(writer, sheet_name='df', index=False)
-    #
-    # print(df)
+
     merge_excel_and_word(file_source)

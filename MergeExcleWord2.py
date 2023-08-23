@@ -19,9 +19,13 @@ from Counterparty import get_counterparty, get_list_of_tax_fatura, get_contract_
 from Word2Pdf import word_2_pdf
 import xlrd
 import os.path
+from docxtpl import DocxTemplate
+from ConvertXlsToXlsx import convert_xls_to_xlsx
 
 MONTH = ['СІЧНЯ', 'ЛЮТОГО', 'БЕРЕЗНЯ', 'КВІТНЯ', 'ТРАВНЯ', 'ЧЕРВНЯ', 'ЛИПНЯ', 'СЕРПНЯ', 'ВЕРЕСНЯ', 'ЖОВТНЯ',
          'ЛИСТОПАДА', 'ГРУДНЯ']
+
+NUMBER_FIRST = 149 + 1  # номер заявления начинается с этого числа
 
 
 def add_counterparty_name_to_df(path_to_file_excel):
@@ -76,8 +80,6 @@ def add_doc_tax_details_to_df(df):
         df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'contract_key'] = tax_doc_details[
             'ДоговорКонтрагента_Key']
 
-        print(row['Порядковий № ПН/РК'], tax_doc_details)
-
     return df
 
 
@@ -90,7 +92,6 @@ def add_doc_contract_details_to_df(df):
 
     for contract_key in set_contract_key:
         contract_details = get_contract_details(contract_key)  # Description,_НКС_ДнівВідтермінуванняОплати,Номер,Дата
-        print(contract_details)
         contract_date = datetime.strptime(contract_details['Дата'], "%Y-%m-%dT%H:%M:%S").strftime("%d.%m.%Y")
         df.loc[df['contract_key'] == contract_key, 'договорДней'] = contract_details['_НКС_ДнівВідтермінуванняОплати']
         df.loc[df['contract_key'] == contract_key, 'договорДата'] = contract_date
@@ -104,10 +105,10 @@ def merge_excel_and_word(path_to_file_excel):
     df = pandas.read_excel(path_to_file_excel, sheet_name='df')
     df = df.astype(str)
     dirname = os.path.dirname(file_source)
-    template = os.path.join(dirname, 'MaketFinal.docx.docx')
+    template = os.path.join(dirname, 'maket.docx')
 
     for i, row in df.iterrows():
-        record_number = f"{i + 1:05d}"
+        record_number = str(i + NUMBER_FIRST)
         document = MailMerge(template)
         # print(document.get_merge_fields())
         document.merge(
@@ -176,19 +177,26 @@ def get_valide_columns(df):
 
 
 if __name__ == '__main__':
-    # file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
-    file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЛЕГІОН 2015\Написать письмо\Копия ЛЕГІОН 2015.xlsx"
+    file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЛЕГІОН 2015\Написать письмо\Копия ЛЕГІОН 2015.xls"
+    filename, file_extension = os.path.splitext(file_source.lower())
+    if file_extension == '.xls':
+        file_source = convert_xls_to_xlsx(file_source)
     df = add_counterparty_name_to_df(file_source)
-    df = add_doc_tax_details_to_df(df)
-    df = add_doc_sale_details_to_df(df)
-    df = add_doc_contract_details_to_df(df)
-    df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
-    df['filename'] = df.index + 1
-    df.astype(str)
-    df['filename'] = pd.concat(["Лист пояснення " + df['filename'].astype(str) + " до " + df[
-        r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str)])
-    df = get_valide_columns(df)
-    with pd.ExcelWriter(file_source, mode='a', if_sheet_exists='replace') as writer:
-        df.to_excel(writer, sheet_name='df', index=False)
+    if len(df) > 0:
+        df = add_doc_tax_details_to_df(df)
+        if len(df) > 0:
+            df = add_doc_sale_details_to_df(df)
+            if len(df) > 0:
+                df = add_doc_contract_details_to_df(df)
+                if len(df) > 0:
+                    df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
+                    df['filename'] = df.index + NUMBER_FIRST
+                    df['filename'] = df['filename'].apply('{:0>5}'.format)
+                    df.astype(str)
+                    df['filename'] = pd.concat(["Лист пояснення " + df['filename'].astype(str) + " до " + df[
+                        r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str)])
+                    df = get_valide_columns(df)
+                    with pd.ExcelWriter(file_source, mode='a', if_sheet_exists='replace') as writer:
+                        df.to_excel(writer, sheet_name='df', index=False)
 
-    merge_excel_and_word(file_source)
+                    merge_excel_and_word(file_source)

@@ -196,6 +196,7 @@ if __name__ == '__main__':
                     df['filename'] = pd.concat(["Лист пояснення " + df['filename'].astype(str) + " до " + df[
                         r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str)])
                     df = get_valide_columns(df)
+                    df = df.astype(str)
                     with pd.ExcelWriter(file_source, mode='a', if_sheet_exists='replace') as writer:
                         df.to_excel(writer, sheet_name='df', index=False)
 

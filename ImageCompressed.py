@@ -20,16 +20,13 @@ def get_size_format(b, factor=1024, suffix="B"):
     return f"{b:.2f}Y{suffix}"
 
 
-def compress_img(image_name, new_size_ratio=1, quality=10, width=None, height=None, to_jpg=True):
+def compress_img(image_name, new_size_ratio=1, quality=10, width=1240, height=1754, to_jpg=True):
     # load the image to memory
     img = Image.open(image_name)
     # print the original image shape
     print("[*] Image shape:", img.size)
     # get the original image size in bytes
     image_size = os.path.getsize(image_name)
-    # quality = int(1 - (image_size / 30000000))
-    width =  1240
-    height = 1754
     # print the size before compression/resizing
     print("[*] Size before compression:", get_size_format(image_size))
     if new_size_ratio < 1.0:
@@ -69,6 +66,7 @@ def compress_img(image_name, new_size_ratio=1, quality=10, width=None, height=No
     saving_diff = new_image_size - image_size
     # print the saving percentage
     print(f"[+] Image size change: {saving_diff / image_size * 100:.2f}% of the original image size.")
+    return new_filename
 
 
 def parse_cmd_argument(cmd):

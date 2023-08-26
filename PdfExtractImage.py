@@ -2,7 +2,6 @@
 # pip3 install Pillow
 # https://github.com/x4nth055/pdf-tools-python
 # https://github.com/x4nth055/pythoncode-tutorials/blob/master/web-scraping/pdf-image-extractor/pdf_image_extractor.py
-file = r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\Resize\РН 11070 21.03.3023.pdf"
 
 
 import os
@@ -10,6 +9,8 @@ import fitz  # PyMuPDF
 import io
 from PIL import Image
 
+Image.MAX_IMAGE_PIXELS = None
+file = r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\Resize\ТТН 13731 10.05.2023.pdf"
 # Output directory for the extracted images
 output_dir = r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\Resize"
 # Desired output image format

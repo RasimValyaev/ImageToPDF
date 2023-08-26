@@ -1,7 +1,7 @@
 # pip install 'PyPDF2<3.0'
+# pdf with images does not work
 import os
 import PyPDF2
-
 
 def folder_exists(full_path):
     if not os.path.exists(full_path):
@@ -29,5 +29,5 @@ def scan_folder(folder_path):
 
 if __name__ == '__main__':
     # path_to_folder = r'\\PRESTIGEPRODUCT\Scan\ЕСП'
-    path_to_folder = r'\\PRESTIGEPRODUCT\Scan\ЕСП - Copy'
+    path_to_folder = r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\Resize\PDF"
     scan_folder(path_to_folder)

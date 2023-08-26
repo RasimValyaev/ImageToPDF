@@ -19,7 +19,6 @@ from Counterparty import get_counterparty, get_list_of_tax_fatura, get_contract_
 from Word2Pdf import word_2_pdf
 import xlrd
 import os.path
-from docxtpl import DocxTemplate
 from ConvertXlsToXlsx import convert_xls_to_xlsx
 
 MONTH = ['СІЧНІ', 'ЛЮТОМУ', 'БЕРЕЗНІ', 'КВІТНІ', 'ТРАВНІ', 'ЧЕРВНІ', 'ЛИПНІ', 'СЕРПНІ', 'ВЕРЕСНІ', 'ЖОВТНІ',
@@ -165,7 +164,7 @@ def add_doc_sale_details_to_df(df):
     return df
 
 
-def get_valide_columns(df):
+def get_validcolumns(df):
     new_columns = []
     for column in df.columns:
         valide_column_name = sanitize_filepath(column)
@@ -195,7 +194,7 @@ if __name__ == '__main__':
                     df.astype(str)
                     df['filename'] = pd.concat(["Лист пояснення " + df['filename'].astype(str) + " до " + df[
                         r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str)])
-                    df = get_valide_columns(df)
+                    df = get_validcolumns(df)
                     df = df.astype(str)
                     with pd.ExcelWriter(file_source, mode='a', if_sheet_exists='replace') as writer:
                         df.to_excel(writer, sheet_name='df', index=False)

@@ -1,10 +1,10 @@
 # pip install fpdf
-
-from fpdf import FPDF
-from PIL import Image
+# создает pdf и добавляет в него изображения из папки
+# в работе использует другой скрипт, изменяющий размер фото
 import glob
 import os
-
+from fpdf import FPDF
+from PIL import Image
 from ImageCompressed import compress_img
 
 Image.MAX_IMAGE_PIXELS = None

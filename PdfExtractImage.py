@@ -3,6 +3,7 @@
 # https://github.com/x4nth055/pdf-tools-python
 # https://github.com/x4nth055/pythoncode-tutorials/blob/master/web-scraping/pdf-image-extractor/pdf_image_extractor.py
 
+# извлекает фотографии из pdf
 
 import os
 import fitz  # PyMuPDF

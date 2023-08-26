@@ -1,4 +1,5 @@
 # https://thepythoncode.com/code/compress-images-in-python
+# изменяет размер pdf файла, содержащего images
 
 import os
 from PIL import Image

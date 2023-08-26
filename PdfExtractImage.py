@@ -51,10 +51,10 @@ def extract_image(file, output_dir, output_format="jpeg"):
             # Check if the image meets the minimum dimensions and save it
             if image.width >= min_width and image.height >= min_height:
                 path = Path(file)
-                print(str(path.absolute()))
-                print(path.name)
-                print(path.absolute().as_uri())
-                print(path.stem)
+                # print(str(path.absolute()))
+                # print(path.name)
+                # print(path.absolute().as_uri())
+                # print(path.stem)
                 image.save(
                     open(os.path.join(output_dir, f"{path.stem}_{page_index + 1}_{image_index}.{output_format}"), "wb"),
                     format=output_format.upper())

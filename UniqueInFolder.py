@@ -49,10 +49,11 @@ def cycle_for_dates(df):
                 print(save_to_path)
                 if not os.path.exists(save_to_path):
                     os.makedirs(save_to_path)
+
                 extract_image(row.filename, save_to_path)
 
             add_image_to_pdf(save_to_path)  # добавляем изображения в pdf
-            print('**************************\n', row.filename)
+            print('**************************\n', doc_type, date)
 
         break
 

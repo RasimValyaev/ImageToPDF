@@ -14,9 +14,9 @@ Image.MAX_IMAGE_PIXELS = None
 
 def add_image_to_pdf(image_directory):
     path = Path(image_directory)
-    path_name = str(path.absolute())
-    file_name = path.name
-    base_name = path.stem
+    # path_name = str(path.absolute())
+    # file_name = path.name
+    # base_name = path.stem
     extensions = ('*.jpg', '*.jpeg', '*.png', '*.gif')
     pdf = FPDF()
     imagelist = []

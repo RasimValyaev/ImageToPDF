@@ -3,6 +3,7 @@
 
 import os
 from PIL import Image
+from pathlib import Path
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -44,12 +45,18 @@ def compress_img(image_name, new_size_ratio=1, quality=10, width=1240, height=17
     # split the filename and extension
     filename, ext = os.path.splitext(image_name)
     # make new filename appending _compressed to the original file name
+    path = Path(image_name)
+    save_to_path = os.path.join(os.path.dirname(str(path)),"compressed")
+    if not os.path.exists(save_to_path):
+        os.makedirs(save_to_path)
+
     if to_jpg:
         # change the extension to JPEG
-        new_filename = f"{filename}_compressed.jpg"
+        new_filename = os.path.join(save_to_path, f"{path.stem}.jpg")
     else:
         # retain the same extension of the original image
-        new_filename = f"{filename}_compressed{ext}"
+        new_filename = os.path.join(save_to_path, f"{path.stem}{ext}")
+
     try:
         # save the image with the corresponding quality and optimize set to True
         img.save(new_filename, quality=quality, optimize=True)
@@ -58,6 +65,7 @@ def compress_img(image_name, new_size_ratio=1, quality=10, width=1240, height=17
         img = img.convert("RGB")
         # save the image with the corresponding quality and optimize set to True
         img.save(new_filename, quality=quality, optimize=True)
+
     print("[+] New file saved:", new_filename)
     # get the new image size in bytes
     new_image_size = os.path.getsize(new_filename)

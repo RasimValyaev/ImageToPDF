@@ -32,10 +32,10 @@ def extract_image(file, output_dir, output_format="jpeg"):
         # Get image list
         image_list = page.get_images(full=True)
         # Print the number of images found on this page
-        if image_list:
-            print(f"[+] Found a total of {len(image_list)} images in page {page_index}")
-        else:
-            print(f"[!] No images found on page {page_index}")
+        # if image_list:
+        #     print(f"[+] Found a total of {len(image_list)} images in page {page_index + 1}")
+        # else:
+        #     print(f"[!] No images found on page {page_index + 1}")
 
         # Iterate over the images on the page
         for image_index, img in enumerate(image_list, start=1):

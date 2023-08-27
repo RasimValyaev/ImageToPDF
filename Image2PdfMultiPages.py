@@ -13,7 +13,7 @@ from pathlib import Path
 Image.MAX_IMAGE_PIXELS = None
 
 
-def add_image_to_pdf(image_directory):
+def add_image_to_pdf(image_directory, save_to_path):
     path = Path(image_directory)
     # path_name = str(path.absolute())
     # file_name = path.name
@@ -49,7 +49,7 @@ def add_image_to_pdf(image_directory):
         pass
 
     pdf_file = re.split(r'\\', image_directory)[-2] + ' ' + re.split(r'\\', image_directory)[-1]
-    save_as = os.path.join(image_directory, pdf_file + ".pdf")
+    save_as = os.path.join(save_to_path, pdf_file + ".pdf")
     pdf.output(save_as, "F")
 
 

@@ -14,7 +14,7 @@ Image.MAX_IMAGE_PIXELS = None
 
 
 def add_image_to_pdf(image_directory, save_to_path):
-    path = Path(image_directory)
+    # path = Path(image_directory)
     # path_name = str(path.absolute())
     # file_name = path.name
     # base_name = path.stem
@@ -24,8 +24,8 @@ def add_image_to_pdf(image_directory, save_to_path):
     for ext in extensions:
         imagelist.extend(glob.glob(os.path.join(image_directory, ext)))
 
-    for imageFile in imagelist:
-        cover = Image.open(imageFile)
+    for image_file in imagelist:
+        cover = Image.open(image_file)
         width, height = cover.size
 
         # convert pixel in mm with 1px=0.264583 mm
@@ -43,8 +43,8 @@ def add_image_to_pdf(image_directory, save_to_path):
         height = height if height < pdf_size[orientation]['h'] else pdf_size[orientation]['h']
 
         pdf.add_page(orientation=orientation)
-        imageFile = compress_img(imageFile)
-        pdf.image(imageFile, 0, 0, width, height)
+        image_file = compress_img(image_file)
+        pdf.image(image_file, 0, 0, width, height)
         print('size ok')
         pass
 
@@ -55,4 +55,4 @@ def add_image_to_pdf(image_directory, save_to_path):
 
 if __name__ == '__main__':
     image_directory = r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\Resize"
-    add_image_to_pdf(image_directory)
+    add_image_to_pdf(image_directory, image_directory)

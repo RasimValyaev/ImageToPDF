@@ -8,6 +8,8 @@
 # https://archit-narain.medium.com/how-to-merge-tables-to-word-documents-using-python-9786124a276b
 # https://pbpython.com/python-word-template.html
 
+# берет данные из Excel и подставляет их в шаблон Word, создает новый док Word
+
 import pandas
 import re
 import os
@@ -15,7 +17,7 @@ import pandas as pd
 from pathvalidate import sanitize_filepath
 from datetime import datetime
 from mailmerge import MailMerge
-from Counterparty import get_counterparty, get_list_of_tax_fatura, get_contract_details, get_doc_sale_details
+from DetailsForTaxDocument import get_counterparty, get_list_of_tax_fatura, get_contract_details, get_doc_sale_details
 from Word2Pdf import word_2_pdf
 import xlrd
 import os.path

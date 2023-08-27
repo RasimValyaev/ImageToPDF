@@ -1,5 +1,5 @@
 # https://thepythoncode.com/code/compress-images-in-python
-# изменяет размер pdf файла, содержащего images
+# изменяет размер, качество изображения
 
 import os
 from PIL import Image
@@ -46,7 +46,7 @@ def compress_img(image_name, new_size_ratio=1, quality=10, width=1240, height=17
     filename, ext = os.path.splitext(image_name)
     # make new filename appending _compressed to the original file name
     path = Path(image_name)
-    save_to_path = os.path.join(os.path.dirname(str(path)),"compressed")
+    save_to_path = os.path.join(os.path.dirname(str(path)), "compressed")
     if not os.path.exists(save_to_path):
         os.makedirs(save_to_path)
 

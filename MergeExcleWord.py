@@ -4,7 +4,6 @@
 # https://archit-narain.medium.com/how-to-merge-tables-to-word-documents-using-python-9786124a276b
 
 import json
-
 import pandas
 import pandas as pd
 from mailmerge import MailMerge

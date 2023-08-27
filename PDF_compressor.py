@@ -6,6 +6,7 @@ import os
 import sys
 from PDFNetPython3.PDFNetPython import PDFDoc, Optimizer, SDFDoc, PDFNet
 
+
 # demo:123456789123456789123456789123456789
 def get_size_format(b, factor=1024, suffix="B"):
     """
@@ -59,6 +60,6 @@ if __name__ == "__main__":
     # Parsing command line arguments entered by user
     # input_file = sys.argv[1]
     # output_file = sys.argv[2]
-    input_file = r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\Resize\РН 11070 21.03.3023.pdf"
-    output_file = r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\Resize\РН 11070 21.03.3023 c.pdf"
+    input_file = r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\РН\2023.03.24\РН 2023.03.24.pdf"
+    output_file = r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\РН\2023.03.24\РН 2023.03.24_compr.pdf"
     compress_file(input_file, output_file)

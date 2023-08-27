@@ -28,8 +28,11 @@ else:
 sys.path.append(os.path.abspath(CONFIG_PATH))
 from configPrestige import username, psw, hostname, port, basename, URL_CONST, chatid_rasim, DATA_AUTH, schema
 
-MONTH = ['СІЧНЯ', 'ЛЮТОГО', 'БЕРЕЗНЯ', 'КВІТНЯ', 'ТРАВНЯ', 'ЧЕРВНЯ', 'ЛИПНЯ', 'СЕРПНЯ', 'ВЕРЕСНЯ', 'ЖОВТНЯ',
-         'ЛИСТОПАДА', 'ГРУДНЯ']
+# MONTH = ['СІЧНЯ', 'ЛЮТОГО', 'БЕРЕЗНЯ', 'КВІТНЯ', 'ТРАВНЯ', 'ЧЕРВНЯ', 'ЛИПНЯ', 'СЕРПНЯ', 'ВЕРЕСНЯ', 'ЖОВТНЯ',
+#          'ЛИСТОПАДА', 'ГРУДНЯ']
+MONTH = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня',
+         'листопада', 'грудня']
+MONTH_STR = "(січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня)"
 
 
 def ger_correct_month(mont_name):
@@ -90,17 +93,21 @@ def get_doc_type(txt_source):
 
 def get_doc_number(txt_source):
     doc_number = 0
-    for item in txt_source:
-        if 'ng' in item.lower():
-            doc_number = re.split(r"\s", item.lower())
-            if len(doc_number) == 2:
-                doc_number = int(re.search(r"\d+", doc_number[1])[0])
+    try:
+        for item in txt_source:
+            item = item.lower()
+            if 'ng' in item:
+                doc_number = int(re.search("ng (\d+)", item)[1])
                 break
 
-    if doc_number == 0:
-        print('Не определился номер док', txt_source)
+        if doc_number == 0:
+            print('Не определился номер док', txt_source)
 
-    return f"{doc_number:05d}"
+    except Exception as e:
+        print(str(e))
+
+    finally:
+        return f"{doc_number:05d}"
 
 
 def get_doc_date(txt_source):
@@ -108,28 +115,25 @@ def get_doc_date(txt_source):
     date_doc = ''
     try:
         for item in txt_source:
-            if 'року' in item:
-                source = re.split(r"\s", item.lower())
+            item = item.lower()
+            if re.search(f"\d+ {MONTH_STR} \d+", item):
+                date_str = re.search(f"\d+ {MONTH_STR} \d+", item)[0]
+                source = date_str.split()
+                date_doc = date_parse(source)
+                break
+
+            elif 'року' in item:
+                source = re.split(r"\s", item)
                 if len(source) == 4:
-                    date = source[-4]
-                    month = source[-3].upper()
-                    month = ger_correct_month(month)
-                    month_index = MONTH.index(month) + 1
-                    if date == '98':
-                        date = '08'
-                    elif date not in range(1, 31):
-                        print('Дата должна быть в интервале от 1 до 31', date)
-                        break
-
-                    year = source[-2]
-                    if int(year) < 2020:
-                        print('Год должен быть больше 2020', year)
-                        break
-
-                    date_doc = date + '.' + f"{month_index:02d}" + '.' + year
-                    date_doc = datetime.strptime(date_doc, '%d.%m.%Y')
-                    date_doc = datetime.strftime(date_doc, '%d.%m.%Y')
+                    date_doc = date_parse(source)
                     break
+
+            elif 'від' in item:  # 'видаткова накладна ng 11244 від 24 березня 2023 p:'
+                source = re.split(r"\s", item)
+                index_date = source.index('від')
+                date = source[index_date + 1:index_date + 4]
+                date_doc = date_parse(date)
+                break
 
         if date_doc == '':
             print('Не нашел данных по дате', txt_source)
@@ -138,6 +142,35 @@ def get_doc_date(txt_source):
         date_doc = ''
         print('ошибка при преобразовании в дату', source)
         print(str(e))
+
+    finally:
+        return date_doc
+
+
+def date_parse(source):
+    date_doc = ''
+    try:
+        # source format 24 березня 2023
+        date = source[0]
+        month = source[1]
+        month = ger_correct_month(month)
+        month_index = MONTH.index(month) + 1
+        year = source[2]
+
+        if date == '98':
+            date = '08'
+        elif int(date) not in range(1, 31):
+            print('Дата должна быть в интервале от 1 до 31', date)
+
+        if int(year) < 2020:
+            print('Год должен быть больше 2020', year)
+
+        date_doc = date + '.' + f"{month_index:02d}" + '.' + year
+        date_doc = datetime.strptime(date_doc, '%d.%m.%Y')
+        date_doc = datetime.strftime(date_doc, '%d.%m.%Y')
+
+    except Exception as e:
+        print(source, str(e))
 
     finally:
         return date_doc
@@ -169,7 +202,7 @@ def image_read(temp_file_name):
         if doc_date == '':
             return ''
         counterparty = get_counterparty(doc_date, doc_number)
-        print(counterparty)
+        print(doc_type, doc_number, doc_date, counterparty)
         return doc_type, doc_date, doc_number, counterparty
 
     except Exception as e:
@@ -181,7 +214,7 @@ def image_lists(folder):
         try:
             count_double = 0  # count double file name
             filename, file_extension = os.path.splitext(file_name.lower())
-            if file_extension in ['.jpg', '.png', '.bmp']:
+            if file_extension in ['.jpg', '.jpeg', '.png', '.bmp']:
                 unix_time = int(time.time())
                 temp_file_name = str(unix_time) + file_extension
                 print(folder, file_name, temp_file_name)
@@ -225,4 +258,4 @@ def image_lists(folder):
 
 
 if __name__ == '__main__':
-    image_lists(r'C:\Rasim\Scan\Rido\2023-08-15_162928')
+    image_lists(r"C:\Users\Rasim\Desktop\Scan\New\АльянсМаркет\ТТН 3664 20.03.2023")

@@ -9,12 +9,13 @@ import pandas as pd
 from mailmerge import MailMerge
 
 
-def merge_excel_and_word(path_to_file_excel):
-    excel_data_fragment = pandas.read_excel(path_to_file_excel, sheet_name='source_raw')
-    print(excel_data_fragment)
-    df = pd.DataFrame()
-    df['tax_number'] = excel_data_fragment['Порядковий № ПН/РК'].astype(str)
-    df['tax_date'] = excel_data_fragment['Дата складання ПН/РК'].astype(str)
+def merge_excel_and_word(df):
+    # df['tax_number'] = df['Порядковий № ПН/РК'].astype(str)
+    # df['tax_date'] = df['Дата складання ПН/РК'].astype(str)
+    df['doc_tax_date'] = df['Порядковий № ПН/РК'].astype(str)
+    df['doc_tax_number'] = df['Дата складання ПН/РК'].astype(str)
+    df['sum_sale'] = df['Дата складання ПН/РК'].astype(str)
+    df['reg_number'] = df['Дата складання ПН/РК'].astype(str)
 
     json_str = df.to_json(orient='records')
     # for row in json_str:
@@ -33,5 +34,6 @@ def merge_excel_and_word(path_to_file_excel):
 
 
 if __name__ == '__main__':
-    file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
-    merge_excel_and_word(file_source)
+    path_to_file_excel = r"c:\Users\Rasim\Desktop\Scan\РелайзКомпани\Релайз для разблокировки.xlsx"
+    df = pandas.read_excel(path_to_file_excel, sheet_name=0)
+    merge_excel_and_word(df)

@@ -10,9 +10,9 @@
 
 # берет данные из Excel и подставляет их в шаблон Word, создает новый док Word
 
-import pandas
 import re
 import os
+import numpy as np
 import pandas as pd
 from pathvalidate import sanitize_filepath
 from datetime import datetime
@@ -23,15 +23,19 @@ import xlrd
 import os.path
 from ConvertXlsToXlsx import convert_xls_to_xlsx
 
-MONTH = ['СІЧНІ', 'ЛЮТОМУ', 'БЕРЕЗНІ', 'КВІТНІ', 'ТРАВНІ', 'ЧЕРВНІ', 'ЛИПНІ', 'СЕРПНІ', 'ВЕРЕСНІ', 'ЖОВТНІ',
-         'ЛИСТОПАДУ', 'ГРУДНІ']
+# pd.set_option('precision', 2)
+pd.set_option('float_format', '{:.2f}'.format)
+
+MONTH = ['січні', 'лютому', 'березні', 'квітні', 'травні', 'червні', 'липні', 'серпні', 'вересні', 'жовтні',
+         'листопаду', 'грудні']
 
 NUMBER_FIRST = 149 + 1  # номер заявления начинается с этого числа
 
 
-def add_counterparty_name_to_df(path_to_file_excel):
+def counterparty_name_add_to_df(path_to_file_excel):
     # added to df counterparty name and code
-    df = pandas.read_excel(path_to_file_excel, sheet_name=0)
+    df = pd.read_excel(path_to_file_excel, sheet_name=0)
+    np.round(df, decimals=2)
     df['контрагент1С'] = None
     df['контрагент1Сuuid'] = None
 
@@ -65,7 +69,7 @@ def get_contract(search_doc, list_doc):
             return item
 
 
-def add_doc_tax_details_to_df(df):
+def doc_tax_details_add_to_df(df):
     # Search uuid_contracte by date fatura and client_uuid
     df['contract_key'] = None
     df['doc_sale_key'] = None
@@ -84,7 +88,7 @@ def add_doc_tax_details_to_df(df):
     return df
 
 
-def add_doc_contract_details_to_df(df):
+def doc_contract_details_add_to_df(df):
     df['договорДней'] = None
     df['договорДата'] = None
     df['договорНомер'] = None
@@ -146,7 +150,7 @@ def merge_excel_and_word(path_to_file_excel):
         #     break
 
 
-def add_doc_sale_details_to_df(df):
+def doc_sale_details_add_to_df(df):
     df['год'] = None
     df['месяц'] = None
     df['номерРеализации'] = None
@@ -166,7 +170,7 @@ def add_doc_sale_details_to_df(df):
     return df
 
 
-def get_validcolumns(df):
+def get_validcolumns_name(df):
     new_columns = []
     for column in df.columns:
         valide_column_name = sanitize_filepath(column)
@@ -178,17 +182,18 @@ def get_validcolumns(df):
 
 
 if __name__ == '__main__':
-    file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЛЕГІОН 2015\Написать письмо\Копия ЛЕГІОН 2015.xls"
+    file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
     filename, file_extension = os.path.splitext(file_source.lower())
     if file_extension == '.xls':
         file_source = convert_xls_to_xlsx(file_source)
-    df = add_counterparty_name_to_df(file_source)
+
+    df = counterparty_name_add_to_df(file_source)
     if len(df) > 0:
-        df = add_doc_tax_details_to_df(df)
+        df = doc_tax_details_add_to_df(df)
         if len(df) > 0:
-            df = add_doc_sale_details_to_df(df)
+            df = doc_sale_details_add_to_df(df)
             if len(df) > 0:
-                df = add_doc_contract_details_to_df(df)
+                df = doc_contract_details_add_to_df(df)
                 if len(df) > 0:
                     df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
                     df['filename'] = df.index + NUMBER_FIRST
@@ -196,8 +201,11 @@ if __name__ == '__main__':
                     df.astype(str)
                     df['filename'] = pd.concat(["Лист пояснення " + df['filename'].astype(str) + " до " + df[
                         r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str)])
-                    df = get_validcolumns(df)
+                    df = get_validcolumns_name(df)
                     df = df.astype(str)
+                    df['Статус_ПН/РК'] = df['Статус_ПН/РК'].astype(float).apply(lambda x: round(x, 2))
+                    df['Обсяг_операцій'] = df['Обсяг_операцій'].astype(float).apply(lambda x: round(x, 2))
+                    df['Сумв_ПДВ'] = df['Сумв_ПДВ'].astype(float).apply(lambda x: round(x, 2))
                     with pd.ExcelWriter(file_source, mode='a', if_sheet_exists='replace') as writer:
                         df.to_excel(writer, sheet_name='df', index=False)
 

@@ -43,7 +43,7 @@ def add_image_to_pdf(image_directory, save_to_path):
         height = height if height < pdf_size[orientation]['h'] else pdf_size[orientation]['h']
 
         pdf.add_page(orientation=orientation)
-        image_file = compress_img(image_file)
+        image_file = compress_img(image_file) # changing image size
         pdf.image(image_file, 0, 0, width, height)
         print('size ok')
         pass

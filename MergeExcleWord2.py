@@ -21,6 +21,7 @@ from DetailsForTaxDocument import get_counterparty, get_list_of_tax_fatura, get_
 from Word2Pdf import word_2_pdf
 import xlrd
 import os.path
+from Main import get_pdf_set_with_date_in_file_name
 from ConvertXlsToXlsx import convert_xls_to_xlsx
 
 # pd.set_option('precision', 2)
@@ -39,12 +40,11 @@ def counterparty_name_add_to_df(path_to_file_excel):
     df['контрагент1С'] = None
     df['контрагент1Сuuid'] = None
 
-    if df['Дата складання ПН/РК'].dtype == 'int64':
+    if df['Дата складання ПН/РК'].dtype in ['int64', 'float64']:
         df["Дата складання ПН/РК"] = df["Дата складання ПН/РК"].map(lambda x: datetime(*xlrd.xldate_as_tuple(x, 0)))
-
     df["Дата складання ПН/РК"] = pd.to_datetime(df["Дата складання ПН/РК"]).dt.strftime('%d.%m.%Y')
 
-    if df['Дата складання ПН/РК'].dtype == 'int64':
+    if df["Дата реєстрації ПН/РК в ЄРПН"].dtype in ['int64', 'float64']:
         df["Дата реєстрації ПН/РК в ЄРПН"] = df["Дата реєстрації ПН/РК в ЄРПН"].map(
             lambda x: datetime(*xlrd.xldate_as_tuple(x, 0)))
     df["Дата реєстрації ПН/РК в ЄРПН"] = pd.to_datetime(df["Дата реєстрації ПН/РК в ЄРПН"]).dt.strftime('%d.%m.%Y')
@@ -107,9 +107,9 @@ def doc_contract_details_add_to_df(df):
 
 
 def merge_excel_and_word(path_to_file_excel):
-    df = pandas.read_excel(path_to_file_excel, sheet_name='df')
+    df = pandas.read_excel(path_to_file_excel, sheet_name=0)
     df = df.astype(str)
-    dirname = os.path.dirname(file_source)
+    dirname = os.path.dirname(excel_file_source)
     template = os.path.join(dirname, 'maket.docx')
 
     for i, row in df.iterrows():
@@ -140,8 +140,8 @@ def merge_excel_and_word(path_to_file_excel):
             os.mkdir(save_to_dir)
 
         # word_file = save_to_dir + fr'/{i + 1}.docx'
-        word_file = os.path.join(save_to_dir, fr'{row["filename"]}.docx')
-        pdf_file = os.path.join(save_to_dir, fr'{row["filename"]}.pdf')
+        word_file = os.path.join(save_to_dir, fr"{row['pdf_filename']}.docx")
+        pdf_file = os.path.join(save_to_dir, fr"{row['pdf_filename']}.pdf")
 
         document.write(word_file)  # saving file
         word_2_pdf(word_file, pdf_file)
@@ -181,13 +181,12 @@ def get_validcolumns_name(df):
     return df
 
 
-if __name__ == '__main__':
-    file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
-    filename, file_extension = os.path.splitext(file_source.lower())
+def add_sheet_to_source(excel_file_source):
+    filename, file_extension = os.path.splitext(excel_file_source.lower())
     if file_extension == '.xls':
-        file_source = convert_xls_to_xlsx(file_source)
+        excel_file_source = convert_xls_to_xlsx(excel_file_source)
 
-    df = counterparty_name_add_to_df(file_source)
+    df = counterparty_name_add_to_df(excel_file_source)
     if len(df) > 0:
         df = doc_tax_details_add_to_df(df)
         if len(df) > 0:
@@ -196,17 +195,41 @@ if __name__ == '__main__':
                 df = doc_contract_details_add_to_df(df)
                 if len(df) > 0:
                     df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
-                    df['filename'] = df.index + NUMBER_FIRST
-                    df['filename'] = df['filename'].apply('{:0>5}'.format)
+                    df['pdf_filename'] = df.index + NUMBER_FIRST
+                    df['pdf_filename'] = df['pdf_filename'].apply('{:0>5}'.format)
                     df.astype(str)
-                    df['filename'] = pd.concat(["Лист пояснення " + df['filename'].astype(str) + " до " + df[
+                    df['pdf_filename'] = pd.concat(["Лист пояснення " + df['pdf_filename'].astype(str) + " до " + df[
                         r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str)])
                     df = get_validcolumns_name(df)
                     df = df.astype(str)
                     df['Статус_ПН/РК'] = df['Статус_ПН/РК'].astype(float).apply(lambda x: round(x, 2))
                     df['Обсяг_операцій'] = df['Обсяг_операцій'].astype(float).apply(lambda x: round(x, 2))
                     df['Сумв_ПДВ'] = df['Сумв_ПДВ'].astype(float).apply(lambda x: round(x, 2))
-                    with pd.ExcelWriter(file_source, mode='a', if_sheet_exists='replace') as writer:
-                        df.to_excel(writer, sheet_name='df', index=False)
 
-                    merge_excel_and_word(file_source)
+    return df
+
+
+# def doc_type_add_to_df(df, df_source):
+#     for i, row in df.iterrows():
+#         df.loc[1] = filename
+
+if __name__ == '__main__':
+    # excel_file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР — копия.xlsx"
+    excel_file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
+    dir_name = os.path.dirname(excel_file_source)
+    df = add_sheet_to_source(excel_file_source)
+    df['номерРеализации'] = df['номерРеализации'].apply(int)
+    df['датаРеализации'] = df['датаРеализации'].apply(pd.to_datetime, format='%d.%m.%Y')
+    pdf_files_df = get_pdf_set_with_date_in_file_name(
+        dir_name)  # dataframe with pdf filenames from folder with excel_file_source
+    pdf_files_df['датаРеализации'] = pdf_files_df['датаРеализации'].apply(pd.to_datetime, format='%d.%m.%Y')
+    type_of_docs_df = pdf_files_df.groupby(['датаРеализации', 'номерРеализации'], as_index=False)['doc_type'].agg(list)
+    df_merge = pd.merge(df, type_of_docs_df, how='left', left_on=['датаРеализации', 'номерРеализации'],
+                  right_on=['датаРеализации', 'номерРеализации'])
+
+    df_merge.fillna('')
+    df_merge['датаРеализации'] = df['датаРеализации'].dt.strftime('%d.%m.%Y')
+    with pd.ExcelWriter(excel_file_source, mode='a', if_sheet_exists='replace') as writer:
+        df_merge.to_excel(writer, sheet_name='df', index=False)
+
+    merge_excel_and_word(excel_file_source)

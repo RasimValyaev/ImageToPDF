@@ -13,6 +13,7 @@ from pathlib import Path
 from Image2PdfMultiPages import add_image_to_pdf
 from PdfExtractImage import extract_image
 
+
 # pd.set_option('precision', 2)
 
 
@@ -42,7 +43,8 @@ def get_pdf_set_with_date_in_file_name(directory):
                 doc_number_list.append(None)
 
             data.update(
-                {"doc_type": doc_type_list, "date": date_list, "doc_number": doc_number_list, "filename": file_list})
+                {"doc_type": doc_type_list, "датаРеализации": date_list, "номерРеализации": doc_number_list,
+                 "filename": file_list})
 
     df = pd.DataFrame(data)
     return df

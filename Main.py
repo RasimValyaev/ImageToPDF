@@ -44,6 +44,8 @@ def cycle_for_dates(df_excel, df_pdf):
                 if os.path.exists(image_save_to_path):
                     # pdf_save_to_path = Path(image_save_to_path,"Group").parents[1]
                     pdf_save_to_path = Path(image_save_to_path, "Group")
+                    if not os.path.exists(pdf_save_to_path):  # the folder create here, because we're using row
+                        os.makedirs(pdf_save_to_path)
                     add_image_to_pdf(image_save_to_path, pdf_save_to_path)  # add image to pdf
                     # os.remove(Path(image_save_to_path).parents[0])
 

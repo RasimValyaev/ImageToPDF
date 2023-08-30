@@ -14,14 +14,13 @@ import re
 import os
 import numpy as np
 import pandas as pd
+import os.path
+import xlrd
 from pathvalidate import sanitize_filepath
 from datetime import datetime
 from mailmerge import MailMerge
 from DetailsForTaxDocument import get_counterparty, get_list_of_tax_fatura, get_contract_details, get_doc_sale_details
 from Word2Pdf import word_2_pdf
-import xlrd
-import os.path
-from Main import get_pdf_set_with_date_in_file_name
 from ConvertXlsToXlsx import convert_xls_to_xlsx
 
 # pd.set_option('precision', 2)
@@ -107,7 +106,7 @@ def doc_contract_details_add_to_df(df):
 
 
 def merge_excel_and_word(path_to_file_excel):
-    df = pandas.read_excel(path_to_file_excel, sheet_name=0)
+    df = pandas.read_excel(path_to_file_excel, sheet_name='df')
     df = df.astype(str)
     dirname = os.path.dirname(excel_file_source)
     template = os.path.join(dirname, 'maket.docx')
@@ -181,7 +180,7 @@ def get_validcolumns_name(df):
     return df
 
 
-def add_sheet_to_source(excel_file_source):
+def add_other_parameters_to_df(excel_file_source):
     filename, file_extension = os.path.splitext(excel_file_source.lower())
     if file_extension == '.xls':
         excel_file_source = convert_xls_to_xlsx(excel_file_source)
@@ -205,31 +204,93 @@ def add_sheet_to_source(excel_file_source):
                     df['Статус_ПН/РК'] = df['Статус_ПН/РК'].astype(float).apply(lambda x: round(x, 2))
                     df['Обсяг_операцій'] = df['Обсяг_операцій'].astype(float).apply(lambda x: round(x, 2))
                     df['Сумв_ПДВ'] = df['Сумв_ПДВ'].astype(float).apply(lambda x: round(x, 2))
+                    df['номерРеализации'] = df['номерРеализации'].apply(int)
+                    df['датаРеализации'] = df['датаРеализации'].apply(pd.to_datetime, format='%d.%m.%Y')
 
     return df
 
 
-# def doc_type_add_to_df(df, df_source):
-#     for i, row in df.iterrows():
-#         df.loc[1] = filename
+# pdf set with date in file name
+def get_pdf_set_with_date_in_file_name(directory):
+    ext = r'\d{2}.\d{2}.\d{4}.pdf$'
+    data = {}
+    doc_type_list = []
+    date_list = []
+    file_list = []
+    doc_number_list = []
+    for filename in os.listdir(directory):
+        if re.search(ext, filename):
+            file_list.append(os.path.join(directory, filename))
+            doc_type_list.append(re.search('[а-яА-ЯёЁa-zA-Z]+', filename)[0])
+            date_raw = re.search("\d{1,22}[.,]\d{1,2}[.,]\d{2,4}", filename)
+            if date_raw:
+                date = date_raw[0].replace(",", ".")
+                date_list.append(date)
+            else:
+                continue
+
+            doc_number = re.search(" \d+ ", filename)
+            if doc_number:
+                doc_number_list.append(int(re.search(" \d+ ", filename)[0]))
+            else:
+                doc_number_list.append(None)
+
+            data.update(
+                {"doc_type": doc_type_list, "датаРеализации": date_list, "номерРеализации": doc_number_list,
+                 "filename": file_list})
+
+    df = pd.DataFrame(data)
+    df['датаРеализации'] = df['датаРеализации'].apply(pd.to_datetime, format='%d.%m.%Y')
+    return df
+
+
+def convert_date_to_str_df(df, column_name):
+    if df[column_name].dtype == '<M8[ns]':
+        df[column_name] = df[column_name].dt.strftime('%d.%m.%Y')
+    else:
+        df[column_name] = pd.to_datetime(df[column_name], format='%d.%m.%Y').dt.strftime('%d.%m.%Y')
+    return df
+
+def save_df_to_excel(excel_file_source):
+    df_merge = pd.DataFrame()
+    pdf_files_df = pd.DataFrame()
+    try:
+        dir_name = os.path.dirname(excel_file_source)
+        df = add_other_parameters_to_df(excel_file_source)
+        pdf_files_df = get_pdf_set_with_date_in_file_name(
+            dir_name)  # dataframe with pdf filenames from folder with excel_file_source
+        type_of_docs_df = pdf_files_df.groupby(['датаРеализации', 'номерРеализации'], as_index=False)['doc_type'].agg(
+            list)
+        df_merge = pd.merge(df, type_of_docs_df, how='left', left_on=['датаРеализации', 'номерРеализации'],
+                            right_on=['датаРеализации', 'номерРеализации'])
+        df_merge = df_merge.sort_values("датаРеализации")
+        df_merge = convert_date_to_str_df(df_merge, 'датаРеализации')
+        df_merge = convert_date_to_str_df(df_merge, 'Дата_складання_ПН/РК')
+        df_merge = convert_date_to_str_df(df_merge, 'Дата_реєстрації_ПН/РК_в_ЄРПН')
+        df_merge = convert_date_to_str_df(df_merge, 'договорДата')
+        # if df_merge['датаРеализации'].dtype == '<M8[ns]':
+        #     df_merge["датаРеализации"] = df_merge["датаРеализации"].dt.strftime('%d.%m.%Y')
+        # else:
+        #     df_excel['датаРеализации'] = pd.to_datetime(df_merge['датаРеализации'], format='%d.%m.%Y').dt.strftime(
+        #         '%d.%m.%Y')
+        # if df_merge["Дата_складання_ПН/РК"].dtype == '<M8[ns]':
+        #     df_merge["Дата_складання_ПН/РК"] = df_merge["Дата_складання_ПН/РК"].dt.strftime('%d.%m.%Y')
+        # if df_merge["Дата_реєстрації_ПН/РК_в_ЄРПН"].dtype == '<M8[ns]':
+        #     df_merge["Дата_реєстрації_ПН/РК_в_ЄРПН"] = df_merge["Дата_реєстрації_ПН/РК_в_ЄРПН"].dt.strftime('%d.%m.%Y')
+        # if df_merge["договорДата"].dtype == '<M8[ns]':
+        #     df_merge["договорДата"] = df_merge["договорДата"].dt.strftime('%d.%m.%Y')
+        df_merge.fillna('')
+        with pd.ExcelWriter(excel_file_source, mode='a', if_sheet_exists='replace') as writer:
+            df_merge.to_excel(writer, sheet_name='df', index=False)
+
+    except Exception as e:
+        err_info = "Error: MergeExcleWord2: %s" % e
+        print(err_info)
+
+    finally:
+        return df_merge, pdf_files_df
+
 
 if __name__ == '__main__':
-    # excel_file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР — копия.xlsx"
     excel_file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
-    dir_name = os.path.dirname(excel_file_source)
-    df = add_sheet_to_source(excel_file_source)
-    df['номерРеализации'] = df['номерРеализации'].apply(int)
-    df['датаРеализации'] = df['датаРеализации'].apply(pd.to_datetime, format='%d.%m.%Y')
-    pdf_files_df = get_pdf_set_with_date_in_file_name(
-        dir_name)  # dataframe with pdf filenames from folder with excel_file_source
-    pdf_files_df['датаРеализации'] = pdf_files_df['датаРеализации'].apply(pd.to_datetime, format='%d.%m.%Y')
-    type_of_docs_df = pdf_files_df.groupby(['датаРеализации', 'номерРеализации'], as_index=False)['doc_type'].agg(list)
-    df_merge = pd.merge(df, type_of_docs_df, how='left', left_on=['датаРеализации', 'номерРеализации'],
-                  right_on=['датаРеализации', 'номерРеализации'])
-
-    df_merge.fillna('')
-    df_merge['датаРеализации'] = df['датаРеализации'].dt.strftime('%d.%m.%Y')
-    with pd.ExcelWriter(excel_file_source, mode='a', if_sheet_exists='replace') as writer:
-        df_merge.to_excel(writer, sheet_name='df', index=False)
-
-    merge_excel_and_word(excel_file_source)
+    save_df_to_excel(excel_file_source)

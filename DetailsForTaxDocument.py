@@ -20,7 +20,8 @@ def get_counterparty(tax_code):
            fr"filter=КодПоЕДРПОУ eq '{tax_code}'&$select=Ref_Key,Description")
     resp = requests.get(url, auth=DATA_AUTH)
     if resp.status_code == 200:
-        counterparty = resp.json()['value'][0].values()
+        if len(resp.json()['value']) != 0:
+            counterparty = resp.json()['value'][0].values()
 
     return counterparty
 

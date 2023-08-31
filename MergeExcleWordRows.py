@@ -5,6 +5,7 @@
 
 import json
 import pandas
+import pandas as pd
 from mailmerge import MailMerge
 
 
@@ -34,5 +35,5 @@ def merge_excel_and_word(df):
 
 if __name__ == '__main__':
     path_to_file_excel = r"c:\Users\Rasim\Desktop\Scan\РелайзКомпани\Релайз для разблокировки.xlsx"
-    df = pandas.read_excel(path_to_file_excel, sheet_name=0)
+    df = pd.read_excel(path_to_file_excel, sheet_name=0)
     merge_excel_and_word(df)

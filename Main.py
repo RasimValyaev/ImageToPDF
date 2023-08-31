@@ -6,6 +6,8 @@
 
 import os
 import re
+import sys
+
 import pandas as pd
 from mailmerge import MailMerge
 from datetime import datetime
@@ -18,8 +20,12 @@ from MergeExcleWord import save_df_to_excel, get_pdf_set_with_date_in_file_name,
 NUMBER_FIRST = 1
 
 # создаем папки по циклу согласно типу_док и дате, и извлекаем туда изображения из pdf
-def cycle_for_dates(df_exl, df_pdf):
+def cycle_for_dates(excel_file_source):
     try:
+        df_exl, df_pdf = save_df_to_excel(excel_file_source)
+        if len(df_exl) == 0 or len(df_pdf) == 0:
+            sys.exit(0)
+        dir_name = os.path.dirname(excel_file_source)
         df_pdf = convert_date_to_str_df(df_pdf, 'датаРеализации')
         doc_types = df_pdf['doc_type'].unique()
         client_okpo_list = df_exl['Податковий_номер_Покупця'].unique()
@@ -27,37 +33,41 @@ def cycle_for_dates(df_exl, df_pdf):
             df_exl_filtr_okpo = df_exl[(df_exl['Податковий_номер_Покупця'] == client_okpo)].reset_index(drop=True)
             dates = df_exl_filtr_okpo['датаРеализации'].unique().tolist()
             client_name = df_exl_filtr_okpo['контрагент1С'][0]
+            save_to_dir = (os.path.join(dirname, sanitize_filepath(client_name)))
+            if not os.path.isdir(save_to_dir):
+                os.mkdir(save_to_dir)
             i = 1
             for date in dates:
+                word_source = pd.DataFrame()
                 record_number = str(i + NUMBER_FIRST)
                 i = i + 1
                 df_exl_date = df_exl_filtr_okpo[(df_exl_filtr_okpo['датаРеализации'] == date)].reset_index(
                     drop=True)
+                df_pdf_filtered = pd.DataFrame()
                 for doc_type in doc_types:
                     df_pdf_filtered = df_pdf[
                         (df_pdf['датаРеализации'] == date) & (df_pdf['doc_type'] == doc_type)].reset_index(drop=True)
-                    doc_number_list = df_pdf_filtered['номерРеализации'].values.tolist().sort()
+                    doc_number_list = df_pdf_filtered['номерРеализации'].sort_values().values.tolist()
                     doc_numbers = ', '.join(map(str, doc_number_list))
                     word_source['doctax_date'] = df_exl_date['Дата_складання_ПН/РК']
                     word_source['doctax_number'] = df_exl_date['Порядковий_№_ПН/РК']
-                    word_source['doctax_amount'] = df_exl_date['Обсяг_операцій'].sum().replace(".", ",")
-                    word_source['doctax_sumtax'] = df_exl_date['Сумв_ПДВ'].sum().replace(".", ",")
+                    word_source['doctax_amount'] = df_exl_date['Обсяг_операцій'].astype(str).replace('.', ',')
+                    word_source['doctax_sumtax'] = df_exl_date['Сумв_ПДВ'].astype(str).replace('.', ',')
                     word_source['reg_number'] = df_exl_date['Реєстраційний_номер']
                     date_revers = datetime.strptime(date, "%d.%m.%Y").strftime("%Y.%m.%d")
-                    image_save_to_path = os.path.join(os.path.dirname(row.filename), date_revers, doc_type)
-                    print(row.filename)
+                    image_save_to_path = os.path.join(save_to_dir, date_revers, doc_type)
                     if not os.path.exists(image_save_to_path):  # the folder create here, because we're using row
                         os.makedirs(image_save_to_path)
-
-                    extract_image(row.filename, image_save_to_path)  # extract images from pdf to image_save_to_path
-                    doc_number_list = df_merge['номерРеализации'].values.tolist()
-                    print(doc_number_list)
-                    if os.path.exists(image_save_to_path):
-                        # pdf_save_to_path = Path(image_save_to_path,"Group").parents[1]
-                        pdf_save_to_path = Path(image_save_to_path, "Group")
-                        if not os.path.exists(pdf_save_to_path):  # the folder create here, because we're using row
-                            os.makedirs(pdf_save_to_path)
-                        add_image_to_pdf(image_save_to_path, pdf_save_to_path)  # add image to pdf
+                    for i, row in df_pdf_filtered.iterrow():
+                        extract_image(row.filename, image_save_to_path)  # extract images from pdf to image_save_to_path
+                        doc_number_list = df_merge['номерРеализации'].values.tolist()
+                        print(doc_number_list)
+                        if os.path.exists(image_save_to_path):
+                            # pdf_save_to_path = Path(image_save_to_path,"Group").parents[1]
+                            pdf_save_to_path = Path(image_save_to_path, "Group")
+                            if not os.path.exists(pdf_save_to_path):  # the folder create here, because we're using row
+                                os.makedirs(pdf_save_to_path)
+                            add_image_to_pdf(image_save_to_path, pdf_save_to_path)  # add image to pdf
 
                     # *********************** source for word
                     json_str = df.to_json(orient='records')
@@ -89,9 +99,6 @@ def cycle_for_dates(df_exl, df_pdf):
                         row=record_number,
                         report_date='{:%d.%m.%Y}'.format(datetime.today())
                     )
-                    save_to_dir = (os.path.join(dirname, sanitize_filepath(client_name)))
-                    if not os.path.isdir(save_to_dir):
-                        os.mkdir(save_to_dir)
 
                     # word_file = save_to_dir + fr'/{i + 1}.docx'
                     word_file = os.path.join(save_to_dir, fr"{date}.docx")
@@ -112,6 +119,4 @@ def cycle_for_dates(df_exl, df_pdf):
 if __name__ == '__main__':
     extension = ['*.pdf']
     excel_file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
-    df_exl, df_pdf = save_df_to_excel(excel_file_source)
-    if len(df_exl) > 0 and len(df_pdf) > 0:
-        cycle_for_dates(df_exl, df_pdf)
+    cycle_for_dates(excel_file_source)

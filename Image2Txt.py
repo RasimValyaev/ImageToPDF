@@ -28,11 +28,12 @@ else:
 sys.path.append(os.path.abspath(CONFIG_PATH))
 from configPrestige import username, psw, hostname, port, basename, URL_CONST, chatid_rasim, DATA_AUTH, schema
 
-# MONTH = ['СІЧНЯ', 'ЛЮТОГО', 'БЕРЕЗНЯ', 'КВІТНЯ', 'ТРАВНЯ', 'ЧЕРВНЯ', 'ЛИПНЯ', 'СЕРПНЯ', 'ВЕРЕСНЯ', 'ЖОВТНЯ',
-#          'ЛИСТОПАДА', 'ГРУДНЯ']
-MONTH = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня',
+MONTH_UA = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня',
          'листопада', 'грудня']
-MONTH_STR = "(січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня)"
+MONTH_RU = ['января', 'февраля', 'марка', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября',
+                'ноября', 'декабря']
+MONTH_STR_UA = "(січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня)"
+MONTH_STR_RU = "(января|февраля|марка|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)"
 
 
 def ger_correct_month(mont_name):
@@ -80,7 +81,9 @@ def get_doc_type(txt_source):
     doc_type = ''
     for item in txt_source:
         item_upper = item.upper()
-        if 'ВИДАТКОВА' in item_upper:
+        if 'РАСХОДНАЯ' in item_upper:
+            doc_type = 'ВН'
+        elif 'ВИДАТКОВА' in item_upper:
             doc_type = 'ВН'
         elif 'ТОВАРНО-ТРАНСПОРТНА НАКЛАДНА' in item_upper:
             doc_type = 'ТТН'
@@ -116,23 +119,26 @@ def get_doc_date(txt_source):
     try:
         for item in txt_source:
             item = item.lower()
-            if re.search(f"\d+ {MONTH_STR} \d+", item):
-                date_str = re.search(f"\d+ {MONTH_STR} \d+", item)[0]
+            doc_date = re.search(f"\d+ {MONTH_STR_UA} \d+", item)
+            if doc_date:
+                date_str = doc_date[0]
                 source = date_str.split()
-                date_doc = date_parse(source)
-                break
-
+                date_doc = date_parse(source,'ua')
             elif 'року' in item:
                 source = re.split(r"\s", item)
                 if len(source) == 4:
-                    date_doc = date_parse(source)
-                    break
-
+                    date_doc = date_parse(source,'ua')
             elif 'від' in item:  # 'видаткова накладна ng 11244 від 24 березня 2023 p:'
                 source = re.split(r"\s", item)
                 index_date = source.index('від')
                 date = source[index_date + 1:index_date + 4]
-                date_doc = date_parse(date)
+                date_doc = date_parse(date,'ua')
+            else:
+                doc_date = re.search(f"\d+ {MONTH_STR_RU} \d+", item)
+                if doc_date:
+                    date_str = doc_date[0]
+                    source = date_str.split()
+                    date_doc = date_parse(source,'ru')
                 break
 
         if date_doc == '':
@@ -147,14 +153,17 @@ def get_doc_date(txt_source):
         return date_doc
 
 
-def date_parse(source):
+def date_parse(source,lang='ua'):
     date_doc = ''
     try:
         # source format 24 березня 2023
         date = source[0]
         month = source[1]
         month = ger_correct_month(month)
-        month_index = MONTH.index(month) + 1
+        if lang == 'ru':
+            month_index = MONTH_RU.index(month) + 1
+        else:
+            month_index = MONTH_UA.index(month) + 1
         year = source[2]
 
         if date == '98':
@@ -258,4 +267,4 @@ def image_lists(folder):
 
 
 if __name__ == '__main__':
-    image_lists(r"C:\Users\Rasim\Desktop\Scan\New\АльянсМаркет\ТТН 3664 20.03.2023")
+    image_lists(r"C:\Rasim\Scan\Test\2023-08-31_152912")

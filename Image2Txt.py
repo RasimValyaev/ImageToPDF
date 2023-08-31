@@ -19,7 +19,7 @@ from datetime import datetime
 import shutil
 import psycopg2
 from pathvalidate import sanitize_filepath  # deleting incorrect characters in file path
-from Image2Pdf import cycle_on_directory_files_and_image_2_pdf, image_2_pdf
+from Image2Pdf import image_2_pdf
 
 if os.environ['COMPUTERNAME'] == 'PRESTIGEPRODUCT':
     CONFIG_PATH = r"d:\Prestige\Python\Config"
@@ -29,9 +29,9 @@ sys.path.append(os.path.abspath(CONFIG_PATH))
 from configPrestige import username, psw, hostname, port, basename, URL_CONST, chatid_rasim, DATA_AUTH, schema
 
 MONTH_UA = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня',
-         'листопада', 'грудня']
+            'листопада', 'грудня']
 MONTH_RU = ['января', 'февраля', 'марка', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября',
-                'ноября', 'декабря']
+            'ноября', 'декабря']
 MONTH_STR_UA = "(січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня)"
 MONTH_STR_RU = "(января|февраля|марка|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)"
 
@@ -123,22 +123,22 @@ def get_doc_date(txt_source):
             if doc_date:
                 date_str = doc_date[0]
                 source = date_str.split()
-                date_doc = date_parse(source,'ua')
+                date_doc = date_parse(source, 'ua')
             elif 'року' in item:
                 source = re.split(r"\s", item)
                 if len(source) == 4:
-                    date_doc = date_parse(source,'ua')
+                    date_doc = date_parse(source, 'ua')
             elif 'від' in item:  # 'видаткова накладна ng 11244 від 24 березня 2023 p:'
                 source = re.split(r"\s", item)
                 index_date = source.index('від')
                 date = source[index_date + 1:index_date + 4]
-                date_doc = date_parse(date,'ua')
+                date_doc = date_parse(date, 'ua')
             else:
                 doc_date = re.search(f"\d+ {MONTH_STR_RU} \d+", item)
                 if doc_date:
                     date_str = doc_date[0]
                     source = date_str.split()
-                    date_doc = date_parse(source,'ru')
+                    date_doc = date_parse(source, 'ru')
                 break
 
         if date_doc == '':
@@ -153,7 +153,7 @@ def get_doc_date(txt_source):
         return date_doc
 
 
-def date_parse(source,lang='ua'):
+def date_parse(source, lang='ua'):
     date_doc = ''
     try:
         # source format 24 березня 2023
@@ -214,7 +214,7 @@ def image_read(temp_file_name):
         print(doc_type, doc_number, doc_date, counterparty)
         return doc_type, doc_date, doc_number, counterparty
 
-    except Exception as e:
+    except:
         print(traceback.format_exc())
 
 

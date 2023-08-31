@@ -3,7 +3,7 @@ import sys
 from datetime import datetime
 import requests
 
-CONFIG_PATH = 'C:\Rasim\Python\Config'
+CONFIG_PATH = r'C:\Rasim\Python\Config'
 sys.path.append(os.path.abspath(CONFIG_PATH))
 from configPrestige import DATA_AUTH
 

@@ -3,7 +3,6 @@
 
 # Import Libraries
 import os
-import sys
 from PDFNetPython3.PDFNetPython import PDFDoc, Optimizer, SDFDoc, PDFNet
 
 

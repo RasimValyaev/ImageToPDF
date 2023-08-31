@@ -3,9 +3,8 @@
 # из pdf в эту папку извлекает изображения
 # создает 1 pdf файл и все изображения заносит туда
 #
-
+import json
 import os
-import re
 import sys
 
 import pandas as pd
@@ -15,9 +14,11 @@ from pathlib import Path
 from Image2PdfMultiPages import add_image_to_pdf
 from pathvalidate import sanitize_filepath
 from PdfExtractImage import extract_image
-from MergeExcleWord import save_df_to_excel, get_pdf_set_with_date_in_file_name, convert_date_to_str_df
+from MergeExcleWord import save_df_to_excel, convert_date_to_str_df
+from Word2Pdf import word_2_pdf
 
 NUMBER_FIRST = 1
+
 
 # создаем папки по циклу согласно типу_док и дате, и извлекаем туда изображения из pdf
 def cycle_for_dates(excel_file_source):
@@ -33,7 +34,7 @@ def cycle_for_dates(excel_file_source):
             df_exl_filtr_okpo = df_exl[(df_exl['Податковий_номер_Покупця'] == client_okpo)].reset_index(drop=True)
             dates = df_exl_filtr_okpo['датаРеализации'].unique().tolist()
             client_name = df_exl_filtr_okpo['контрагент1С'][0]
-            save_to_dir = (os.path.join(dirname, sanitize_filepath(client_name)))
+            save_to_dir = (os.path.join(dir_name, sanitize_filepath(client_name)))
             if not os.path.isdir(save_to_dir):
                 os.mkdir(save_to_dir)
             i = 1
@@ -43,7 +44,6 @@ def cycle_for_dates(excel_file_source):
                 i = i + 1
                 df_exl_date = df_exl_filtr_okpo[(df_exl_filtr_okpo['датаРеализации'] == date)].reset_index(
                     drop=True)
-                df_pdf_filtered = pd.DataFrame()
                 for doc_type in doc_types:
                     df_pdf_filtered = df_pdf[
                         (df_pdf['датаРеализации'] == date) & (df_pdf['doc_type'] == doc_type)].reset_index(drop=True)
@@ -60,7 +60,7 @@ def cycle_for_dates(excel_file_source):
                         os.makedirs(image_save_to_path)
                     for i, row in df_pdf_filtered.iterrow():
                         extract_image(row.filename, image_save_to_path)  # extract images from pdf to image_save_to_path
-                        doc_number_list = df_merge['номерРеализации'].values.tolist()
+                        doc_number_list = df_pdf_filtered['номерРеализации'].values.tolist()
                         print(doc_number_list)
                         if os.path.exists(image_save_to_path):
                             # pdf_save_to_path = Path(image_save_to_path,"Group").parents[1]
@@ -70,7 +70,7 @@ def cycle_for_dates(excel_file_source):
                             add_image_to_pdf(image_save_to_path, pdf_save_to_path)  # add image to pdf
 
                     # *********************** source for word
-                    json_str = df.to_json(orient='records')
+                    json_str = word_source.to_json(orient='records')
                     # for row in json_str:
                     columns = json_str.replace("\\u00a0", "")  # getting rid of empty cells if any there
                     columns = json.dumps(columns)
@@ -78,7 +78,7 @@ def cycle_for_dates(excel_file_source):
                     array = '{"columns": %s}' % columns
                     data = json.loads(array)
 
-                    template = os.path.join(dirname, 'maket.docx')
+                    template = os.path.join(dir_name, 'maket.docx')
                     document = MailMerge(template)
                     document.merge_rows('doctax_date', data['columns'])
                     document.merge_rows('doctax_number', data['columns'])
@@ -118,5 +118,5 @@ def cycle_for_dates(excel_file_source):
 
 if __name__ == '__main__':
     extension = ['*.pdf']
-    excel_file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
+    excel_file_source = r"\\PRESTIGEPRODUCT\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
     cycle_for_dates(excel_file_source)

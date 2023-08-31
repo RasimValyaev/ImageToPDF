@@ -3,7 +3,7 @@ from pathlib import Path
 import win32com.client as win32
 
 
-def convert_xls_to_xlsx(xls_path) -> None:
+def convert_xls_to_xlsx(xls_path) -> str:
     path = Path(xls_path)
     excel = win32.gencache.EnsureDispatch('Excel.Application')
     wb = excel.Workbooks.Open(path.absolute())

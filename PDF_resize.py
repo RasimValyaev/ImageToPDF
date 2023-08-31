@@ -3,12 +3,14 @@
 import os
 import PyPDF2
 
+
 def folder_exists(full_path):
     if not os.path.exists(full_path):
         os.makedirs(full_path)
 
 
 def scan_folder(folder_path):
+    new_file = ''
     copy_to_folder = os.path.join(folder_path, "Resize")
     folder_exists(copy_to_folder)
     for file_name in os.listdir(folder_path):
@@ -24,8 +26,9 @@ def scan_folder(folder_path):
         except Exception as e:
             print(str(e))
 
-    with open(new_file, "wb+") as f:
-        writer.write(f)
+    if new_file != '':
+        with open(new_file, "wb+") as f:
+            writer.write(f)
 
 
 if __name__ == '__main__':

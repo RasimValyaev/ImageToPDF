@@ -106,7 +106,7 @@ def doc_contract_details_add_to_df(df):
 
 
 def merge_excel_and_word(path_to_file_excel):
-    df = pandas.read_excel(path_to_file_excel, sheet_name='df')
+    df = pd.read_excel(path_to_file_excel, sheet_name='df')
     df = df.astype(str)
     dirname = os.path.dirname(excel_file_source)
     template = os.path.join(dirname, 'maket.docx')

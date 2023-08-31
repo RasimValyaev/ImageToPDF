@@ -5,7 +5,6 @@
 
 import json
 import pandas
-import pandas as pd
 from mailmerge import MailMerge
 
 

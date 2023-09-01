@@ -44,30 +44,37 @@ def cycle_for_dates(excel_file_source):
                 i = i + 1
                 df_exl_date = df_exl_filtr_okpo[(df_exl_filtr_okpo['датаРеализации'] == date)].reset_index(
                     drop=True)
+
                 for doc_type in doc_types:
                     df_pdf_filtered = df_pdf[
                         (df_pdf['датаРеализации'] == date) & (df_pdf['doc_type'] == doc_type)].reset_index(drop=True)
+
                     doc_number_list = df_pdf_filtered['номерРеализации'].sort_values().values.tolist()
                     doc_numbers = ', '.join(map(str, doc_number_list))
                     word_source['doctax_date'] = df_exl_date['Дата_складання_ПН/РК']
                     word_source['doctax_number'] = df_exl_date['Порядковий_№_ПН/РК']
-                    word_source['doctax_amount'] = df_exl_date['Обсяг_операцій'].astype(str).replace('.', ',')
-                    word_source['doctax_sumtax'] = df_exl_date['Сумв_ПДВ'].astype(str).replace('.', ',')
+                    word_source['doctax_amount'] = [x.replace('.', ',') for x in
+                                                    df_exl_date['Обсяг_операцій'].astype(str)]
+                    word_source['doctax_sumtax'] = [x.replace('.', ',') for x in df_exl_date['Сумв_ПДВ'].astype(str)]
                     word_source['reg_number'] = df_exl_date['Реєстраційний_номер']
+                    word_source.sort_values(by=['doctax_date', 'doctax_number'], ascending=[True, True], inplace=True)
+                    doc_ttn = ''
+                    if doc_type == 'ТТН':
+                        doc_ttn = f"\nТоваро транспортна накладна № {doc_numbers} від {date} р."
+
                     date_revers = datetime.strptime(date, "%d.%m.%Y").strftime("%Y.%m.%d")
                     image_save_to_path = os.path.join(save_to_dir, date_revers, doc_type)
                     if not os.path.exists(image_save_to_path):  # the folder create here, because we're using row
                         os.makedirs(image_save_to_path)
-                    for i, row in df_pdf_filtered.iterrow():
+
+                    pdf_save_to_path = Path(image_save_to_path, "Group")
+                    if not os.path.exists(pdf_save_to_path):  # the folder create here, because we're using row
+                        os.makedirs(pdf_save_to_path)
+
+                    for i, row in df_pdf_filtered.iterrows():
                         extract_image(row.filename, image_save_to_path)  # extract images from pdf to image_save_to_path
-                        doc_number_list = df_pdf_filtered['номерРеализации'].values.tolist()
-                        print(doc_number_list)
-                        if os.path.exists(image_save_to_path):
-                            # pdf_save_to_path = Path(image_save_to_path,"Group").parents[1]
-                            pdf_save_to_path = Path(image_save_to_path, "Group")
-                            if not os.path.exists(pdf_save_to_path):  # the folder create here, because we're using row
-                                os.makedirs(pdf_save_to_path)
-                            add_image_to_pdf(image_save_to_path, pdf_save_to_path)  # add image to pdf
+
+                    add_image_to_pdf(image_save_to_path, pdf_save_to_path)  # add image to pdf
 
                     # *********************** source for word
                     json_str = word_source.to_json(orient='records')
@@ -77,8 +84,8 @@ def cycle_for_dates(excel_file_source):
                     columns = json.loads(columns)
                     array = '{"columns": %s}' % columns
                     data = json.loads(array)
-
-                    template = os.path.join(dir_name, 'maket.docx')
+                    # template = 'Мaket.docx'
+                    template = os.path.join(dir_name, r'C:\Rasim\Python\ImageToPDF\Maket.docx')
                     document = MailMerge(template)
                     document.merge_rows('doctax_date', data['columns'])
                     document.merge_rows('doctax_number', data['columns'])
@@ -87,27 +94,25 @@ def cycle_for_dates(excel_file_source):
                     document.merge_rows('reg_number', data['columns'])
                     document.merge(
                         counterparty_code=df_exl_date['Податковий_номер_Покупця'][0],
-                        total_sale=df_exl_date['Обсяг_операцій'].sum().replace(".", ",")[0],
+                        total_sale=str(round(df_exl_date['Обсяг_операцій'].sum(), 2)).replace(".", ","),
                         contracte_number=df_exl_date['договорНомер'][0],
                         contracte_date=df_exl_date['договорДата'][0],
-                        doc_sale_month=df_exl_date['месяц'].lower()[0],
+                        doc_sale_month=df_exl_date['месяц'][0],
                         doc_sale_year=df_exl_date['год'][0],
                         doc_sale_numbers=doc_numbers,
-                        doc_sale_date=df_exl_date['датаРеализации'][0],
+                        doc_sale_date=date,
                         contracte_count_days=df_exl_date['договорДней'][0],
                         counterpary=client_name,
+                        docTTN=doc_ttn,
                         row=record_number,
                         report_date='{:%d.%m.%Y}'.format(datetime.today())
                     )
 
-                    # word_file = save_to_dir + fr'/{i + 1}.docx'
                     word_file = os.path.join(save_to_dir, fr"{date}.docx")
                     pdf_file = os.path.join(save_to_dir, fr"{date}.pdf")
                     document.write(word_file)  # saving file
                     word_2_pdf(word_file, pdf_file)
                     # ***********************
-
-                    # merge_excel_and_word(excel_file_source)
 
                     print('**************************\n', doc_type, date)
 
@@ -118,5 +123,5 @@ def cycle_for_dates(excel_file_source):
 
 if __name__ == '__main__':
     extension = ['*.pdf']
-    excel_file_source = r"\\PRESTIGEPRODUCT\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
+    excel_file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР — копия.xlsx"
     cycle_for_dates(excel_file_source)

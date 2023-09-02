@@ -37,14 +37,14 @@ def cycle_for_dates(excel_file_source):
             save_to_dir = (os.path.join(dir_name, sanitize_filepath(client_name)))
             if not os.path.isdir(save_to_dir):
                 os.mkdir(save_to_dir)
-            i = 0
+            record_number = NUMBER_FIRST
             for date in dates:
                 word_source_df = pd.DataFrame(
                     columns=['doctax_date', 'doctax_number', 'doctax_amount', 'doctax_sumtax', 'reg_number',
                              'counterparty_code', 'total_sale', 'contracte_number', 'contracte_date', 'doc_sale_month',
                              'doc_sale_year', 'contracte_count_days'])
-                record_number = str(i + NUMBER_FIRST)
-                i = i + 1
+                print(record_number)
+
                 df_exl_okpo_date = df_exl_okpo[(df_exl_okpo['датаРеализации'] == date)].reset_index(drop=True)
 
                 doc_number_list_ttn = df_exl_okpo_date[df_exl_okpo_date['doc_type'].astype(str).str.contains('ТТН')][
@@ -67,7 +67,8 @@ def cycle_for_dates(excel_file_source):
                     df_pdf_data_doctyoe = df_pdf[
                         (df_pdf['датаРеализации'] == date) & (df_pdf['doc_type'] == doc_type)].reset_index(drop=True)
                     for i, row in df_pdf_data_doctyoe.iterrows():
-                        df_exl_okpo_date_doctype = df_exl_okpo_date[df_exl_okpo_date['doc_type'].astype(str).str.contains(row.doc_type)]
+                        df_exl_okpo_date_doctype = df_exl_okpo_date[
+                            df_exl_okpo_date['doc_type'].astype(str).str.contains(row.doc_type)]
                         word_source_doctype['doctax_date'] = df_exl_okpo_date_doctype['Дата_складання_ПН/РК']
                         word_source_doctype['doctax_number'] = df_exl_okpo_date_doctype['Порядковий_№_ПН/РК']
                         word_source_doctype['doctax_amount'] = [x.replace('.', ',') for x in
@@ -85,10 +86,6 @@ def cycle_for_dates(excel_file_source):
                         word_source_df = pd.concat([word_source_df, word_source_doctype]).reset_index(drop=True)
                         word_source_df.sort_values(by=['doctax_date', 'doctax_number'], ascending=[True, True],
                                                    inplace=True)
-
-                        # if doc_type == 'ТТН':
-                        #     doc_ttn = f"Товаро транспортна накладна № {doc_numbers_ttn} від {date} р."
-
                         date_revers = datetime.strptime(date, "%d.%m.%Y").strftime("%Y.%m.%d")
                         image_save_to_path = os.path.join(save_to_dir, date_revers, doc_type)
                         if not os.path.exists(image_save_to_path):  # the folder create here, because we're using row
@@ -98,8 +95,9 @@ def cycle_for_dates(excel_file_source):
                         if not os.path.exists(pdf_save_to_path):  # the folder create here, because we're using row
                             os.makedirs(pdf_save_to_path)
 
-                        # for i, row in df_pdf_data_doctyoe.iterrows():
-                        #     extract_image(row.filename, image_save_to_path)  # extract images from pdf to image_save_to_path
+                        # extract images from pdf to image_save_to_path
+                        for i, row in df_pdf_data_doctyoe.iterrows():
+                            extract_image(row.filename, image_save_to_path)
 
                         add_image_to_pdf(image_save_to_path, pdf_save_to_path)  # add image to pdf
 
@@ -132,12 +130,13 @@ def cycle_for_dates(excel_file_source):
                     contracte_count_days=word_source_df['contracte_count_days'][0],
                     counterpary=client_name,
                     docTTN=doc_ttn,
-                    row=record_number,
+                    row=str(record_number),
                     report_date='{:%d.%m.%Y}'.format(datetime.today())
                 )
 
-                word_file = os.path.join(save_to_dir, fr"{date}.docx")
-                pdf_file = os.path.join(save_to_dir, fr"{date}.pdf")
+                record_number = record_number + 1
+                word_file = str(Path(os.path.join(save_to_dir, fr"{date}.docx")))
+                pdf_file = str(Path(os.path.join(save_to_dir, fr"{date}.pdf")))
                 document.write(word_file)  # saving file
                 word_2_pdf(word_file, pdf_file)
                 print('**************************\n', date)
@@ -145,6 +144,9 @@ def cycle_for_dates(excel_file_source):
     except Exception as e:
         err_info = "Error: Main: %s" % e
         print(err_info)
+
+    finally:
+        sys.exit(0)
 
 
 if __name__ == '__main__':

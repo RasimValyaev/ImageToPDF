@@ -252,7 +252,7 @@ def convert_date_to_str_df(df, column_name):
     return df
 
 
-def save_df_to_excel(excel_file_source):
+def edit_excel_and_return_df(excel_file_source):
     df_merge = pd.DataFrame()
     pdf_files_df = pd.DataFrame()
     try:
@@ -284,4 +284,4 @@ def save_df_to_excel(excel_file_source):
 
 if __name__ == '__main__':
     excel_file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
-    save_df_to_excel(excel_file_source)
+    edit_excel_and_return_df(excel_file_source)

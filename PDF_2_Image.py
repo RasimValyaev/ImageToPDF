@@ -3,9 +3,10 @@
 import os
 from pdf2image import convert_from_path
 from Image2Txt import image_read
-
+from pathlib import Path
 
 def read_pdf(filename):
+    dr = Path(filename).parent
     path_to_bin = r'c:\Rasim\Python\ImageToPDF\poppler-23.08.0\Library\bin'
     images = convert_from_path(filename, poppler_path=path_to_bin, dpi=200)
     x = 1
@@ -34,5 +35,5 @@ def scan_folder(folder_path):
 
 
 if __name__ == '__main__':
-    path_to_folder = r'C:\Users\Rasim\Desktop\Scan\Amik\PDF'
+    path_to_folder = r'C:\Rasim\Python\Prestige\TelegramBot'
     scan_folder(path_to_folder)

@@ -145,8 +145,6 @@ def merge_excel_and_word(path_to_file_excel):
         document.write(word_file)  # saving file
         word_2_pdf(word_file, pdf_file)
         os.remove(word_file)
-        # if i == 4:
-        #     break
 
 
 def doc_sale_details_add_to_df(df):

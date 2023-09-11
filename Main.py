@@ -110,7 +110,6 @@ def cycle_for_dates(excel_file_source):
                 columns = json.loads(columns)
                 array = '{"columns": %s}' % columns
                 data = json.loads(array)
-                # template = 'Мaket.docx'
                 template = os.path.join(dir_name, r'C:\Rasim\Python\ImageToPDF\Maket.docx')
                 document = MailMerge(template)
                 document.merge_rows('doctax_date', data['columns'])

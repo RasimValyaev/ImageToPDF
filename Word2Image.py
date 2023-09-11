@@ -7,8 +7,8 @@ import pyautogui
 import win32gui
 import time
 
-docfile = r'C:\Rasim\Python\Prestige\TelegramBot\001694007370.docx'
-shotfile = r'C:\Rasim\Python\Prestige\TelegramBot\001694007370.png'
+docfile = rfilename = r"C:\Rasim\Python\Prestige\TelegramBot\001694011666.docx"
+shotfile = r'C:\Rasim\Python\Prestige\TelegramBot\111.png'
 
 
 def windowEnumerationHandler(hwnd, top_windows):

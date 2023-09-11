@@ -16,6 +16,6 @@ def word_2_pdf(in_file_word, out_file_pdf):
 
 
 if __name__ == '__main__':
-    in_file_word = r'c:\Users\Rasim\Desktop\Scan\9.docx'
+    in_file_word = rfilename = r"C:\Rasim\Python\Prestige\TelegramBot\001694011666.docx"
     out_file_pdf = r'c:\Users\Rasim\Desktop\Scan\9_13.pdf'
     word_2_pdf(in_file_word, out_file_pdf)

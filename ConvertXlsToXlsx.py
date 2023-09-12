@@ -20,4 +20,6 @@ def convert_xls_to_xlsx(xls_path) -> str:
 
 if __name__ == '__main__':
     xls_path = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЛЕГІОН 2015\Написать письмо\Копия ЛЕГІОН 2015.xls"
-    convert_xls_to_xlsx(xls_path)
+    print('xls_path', xls_path)
+    xlsx_path = convert_xls_to_xlsx(xls_path)
+    print('xlsx_path',xlsx_path)

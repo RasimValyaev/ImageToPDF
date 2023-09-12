@@ -15,7 +15,7 @@ from configPrestige import DATA_AUTH
 
 
 def get_counterparty(tax_code):
-    counterparty = ''
+    counterparty = []
     url = (r"http://192.168.1.254/utp_prestige/odata/standard.odata/Catalog_Контрагенты?$format=json&$"
            fr"filter=КодПоЕДРПОУ eq '{tax_code}'&$select=Ref_Key,Description")
     resp = requests.get(url, auth=DATA_AUTH)

@@ -24,7 +24,7 @@ from DetailsForTaxDocument import get_counterparty, get_list_of_tax_fatura, get_
 from Word2Pdf import word_2_pdf
 from ConvertXlsToXlsx import convert_xls_to_xlsx
 
-# pd.set_option('precision', 2)
+# pd.set_option('precision', 2) # not norking
 pd.set_option('float_format', '{:.2f}'.format)
 
 MONTH = ['січні', 'лютому', 'березні', 'квітні', 'травні', 'червні', 'липні', 'серпні', 'вересні', 'жовтні',
@@ -57,10 +57,12 @@ def counterparty_name_add_to_df(path_to_file_excel):
             if tax_code == 0:
                 print('stop')
             try:
-                client_uuid, client_name = get_counterparty(tax_code)
-                print(client_name)
-                df.loc[df['Податковий номер Покупця'] == tax_code, 'контрагент1С'] = client_name
-                df.loc[df['Податковий номер Покупця'] == tax_code, 'контрагент1Сuuid'] = client_uuid
+                counterparty = get_counterparty(tax_code)
+                if len(counterparty) > 1:
+                    client_uuid, client_name = counterparty
+                    print(client_name)
+                    df.loc[df['Податковий номер Покупця'] == tax_code, 'контрагент1С'] = client_name
+                    df.loc[df['Податковий номер Покупця'] == tax_code, 'контрагент1Сuuid'] = client_uuid
             except Exception as e:
                 print(str(e))
 

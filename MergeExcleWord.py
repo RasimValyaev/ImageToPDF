@@ -284,31 +284,37 @@ def convert_date_to_str_df(df, column_name):
     return df
 
 
-def edit_excel_and_return_df(excel_file_source):
+# create sheet "df" in current file_excel
+# if there are pdf files on current folder added doc_type in Excel
+def edit_excel_and_return_df(excel_file):
     df_merge = pd.DataFrame()
     pdf_files_df = pd.DataFrame()
     try:
-        dir_name = os.path.dirname(excel_file_source)
-        df = add_other_parameters_to_df(excel_file_source)
+        dir_name = os.path.dirname(excel_file)
+        df = add_other_parameters_to_df(excel_file)
         pdf_files_df = get_pdf_set_with_date_in_file_name(
             dir_name)  # dataframe with pdf filenames from folder with excel_file_source
-        if len(pdf_files_df) > 0:
+        if len(pdf_files_df) > 0:  # the sheet "df" need create also if isn't files of pdf
             type_of_docs_df = pdf_files_df.groupby(['датаРеализации', 'номерРеализации'],
                                                    as_index=False)['doc_type'].agg(list)
             df_merge = pd.merge(df, type_of_docs_df, how='left', left_on=['датаРеализации', 'номерРеализации'],
                                 right_on=['датаРеализации', 'номерРеализации'])
-            df_merge = df_merge.sort_values("датаРеализации")
-            df_merge = convert_date_to_str_df(df_merge, 'датаРеализации')
-            df_merge = convert_date_to_str_df(df_merge, 'Дата_складання_ПН/РК')
-            df_merge = convert_date_to_str_df(df_merge, 'Дата_реєстрації_ПН/РК_в_ЄРПН')
-            df_merge = convert_date_to_str_df(df_merge, 'договорДата')
-            df_merge.rename(columns={'doc_type': 'doc_type_list'})
-            df_merge.fillna('')
-            # df.to_excel('output.xlsx', engine='openpyxl')  # For .xlsx files
-            # df.to_excel('output.xls', engine='xlwt')  # For .xls files
+        else:
+            df_merge = df
+            df_merge['doc_type'] = None
 
-            with pd.ExcelWriter(excel_file_source, mode='a', if_sheet_exists='replace') as writer:
-                df_merge.to_excel(writer, sheet_name='df', index=False)
+        df_merge = df_merge.sort_values("датаРеализации")
+        df_merge = convert_date_to_str_df(df_merge, 'датаРеализации')
+        df_merge = convert_date_to_str_df(df_merge, 'Дата_складання_ПН/РК')
+        df_merge = convert_date_to_str_df(df_merge, 'Дата_реєстрації_ПН/РК_в_ЄРПН')
+        df_merge = convert_date_to_str_df(df_merge, 'договорДата')
+        df_merge.rename(columns={'doc_type': 'doc_type_list'})
+        df_merge.fillna('')
+        # df.to_excel('output.xlsx', engine='openpyxl')  # For .xlsx files
+        # df.to_excel('output.xls', engine='xlwt')  # For .xls files
+
+        with pd.ExcelWriter(excel_file, mode='a', if_sheet_exists='replace') as writer:
+            df_merge.to_excel(writer, sheet_name='df', index=False)
 
     except Exception as e:
         err_info = "Error: MergeExcleWord: %s" % e
@@ -319,7 +325,7 @@ def edit_excel_and_return_df(excel_file_source):
 
 
 if __name__ == '__main__':
-    excel_file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЛЕГІОН 2015\Написать письмо\Копия ЛЕГІОН 2015.xls"
+    excel_file_source = r"\\PrestigeProduct\Scan\ДЕЛІКАТ - Copy\ТОВ ДЕЛІКАТ РИТЕЙЛ\ДЕЛІКАТ РИТЕЙЛ.xlsx"
     df_merge, pdf_files_df = edit_excel_and_return_df(excel_file_source)
     print(df_merge)
     print(pdf_files_df)

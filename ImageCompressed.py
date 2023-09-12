@@ -22,7 +22,7 @@ def get_size_format(b, factor=1024, suffix="B"):
     return f"{b:.2f}Y{suffix}"
 
 
-def compress_img(image_name, new_size_ratio=1, quality=7, width=1240, height=1754, to_jpg=True):
+def compress_img(image_name, new_size_ratio=1, quality=20, width=1240, height=1754, to_jpg=True):
     try:
         # load the image to memory
         img = Image.open(image_name)

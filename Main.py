@@ -6,7 +6,6 @@
 import json
 import os
 import sys
-
 import pandas as pd
 from mailmerge import MailMerge
 from datetime import datetime
@@ -17,11 +16,55 @@ from PdfExtractImage import extract_image
 from MergeExcleWord import edit_excel_and_return_df, convert_date_to_str_df
 from Word2Pdf import word_2_pdf
 
-NUMBER_FIRST = 41
+NUMBER_FIRST = 1
+
+
+def merge_word(word_source_df, single_parameters, merge_to_group=True):
+    record_number = single_parameters['record_number']
+    save_to_dir = single_parameters['save_to_dir']
+    dir_name = single_parameters['dir_name']
+    date = single_parameters['date']
+    json_str = word_source_df.to_json(orient='records')
+    columns = json_str.replace("\\u00a0", "")  # getting rid of empty cells if any there
+    columns = json.dumps(columns)
+    columns = json.loads(columns)
+    array = '{"columns": %s}' % columns
+    data = json.loads(array)
+    template = os.path.join(dir_name, r'C:\Rasim\Python\ImageToPDF\Maket.docx')
+    document = MailMerge(template)
+    document.merge_rows('doctax_date', data['columns'])
+    document.merge_rows('doctax_number', data['columns'])
+    document.merge_rows('doctax_amount', data['columns'])
+    document.merge_rows('doctax_sumtax', data['columns'])
+    document.merge_rows('reg_number', data['columns'])
+    document.merge(
+        counterparty_code=word_source_df['counterparty_code'][0],
+        total_sale=str(round(word_source_df['total_sale'].sum(), 2)).replace(".", ","),
+        contracte_number=word_source_df['contracte_number'][0],
+        contracte_date=word_source_df['contracte_date'][0],
+        doc_sale_month=word_source_df['doc_sale_month'][0],
+        doc_sale_year=word_source_df['doc_sale_year'][0],
+        doc_sale_numbers=single_parameters['doc_numbers_sale'],
+        doc_sale_date=single_parameters['date'],
+        contracte_count_days=word_source_df['contracte_count_days'][0],
+        counterpary=single_parameters['client_name'],
+        docTTN=single_parameters['doc_ttn'],
+        row=str(record_number),
+        report_date='{:%d.%m.%Y}'.format(datetime.today())
+    )
+    if merge_to_group:
+        word_file = str(Path(os.path.join(save_to_dir, fr"{date}.docx")))
+        pdf_file = str(Path(os.path.join(save_to_dir, fr"{date}.pdf")))
+    else:
+        word_file = str(Path(os.path.join(save_to_dir, fr"{word_source_df['pdf_filename'],values[0]}.docx")))
+        pdf_file = str(Path(os.path.join(save_to_dir, fr"{date}.pdf")))
+    document.write(word_file)  # saving file
+    word_2_pdf(word_file, pdf_file)
+    print('**************************\n', date)
 
 
 # создаем папки по циклу согласно типу_док и дате, и извлекаем туда изображения из pdf
-def cycle_for_dates(excel_file_source):
+def merge_files_to_one(excel_file_source):
     try:
         df_exl, df_pdf = edit_excel_and_return_df(excel_file_source)
         if len(df_exl) == 0 or len(df_pdf) == 0:
@@ -32,12 +75,12 @@ def cycle_for_dates(excel_file_source):
         client_okpo_list = df_exl['Податковий_номер_Покупця'].unique()
         for client_okpo in client_okpo_list:
             df_exl_okpo = df_exl[(df_exl['Податковий_номер_Покупця'] == client_okpo)].reset_index(drop=True)
-            dates = df_exl_okpo['датаРеализации'].unique().tolist()
             client_name = df_exl_okpo['контрагент1С'][0]
             save_to_dir = (os.path.join(dir_name, sanitize_filepath(client_name)))
             if not os.path.isdir(save_to_dir):
                 os.mkdir(save_to_dir)
             record_number = NUMBER_FIRST
+            dates = df_exl_okpo['датаРеализации'].unique().tolist()
             for date in dates:
                 word_source_df = pd.DataFrame(
                     columns=['doctax_date', 'doctax_number', 'doctax_amount', 'doctax_sumtax', 'reg_number',
@@ -104,42 +147,18 @@ def cycle_for_dates(excel_file_source):
                 # *********************** source for word
                 word_source_df = word_source_df.drop_duplicates()
                 if len(word_source_df) > 0:
-                    json_str = word_source_df.to_json(orient='records')
-                    # for row in json_str:
-                    columns = json_str.replace("\\u00a0", "")  # getting rid of empty cells if any there
-                    columns = json.dumps(columns)
-                    columns = json.loads(columns)
-                    array = '{"columns": %s}' % columns
-                    data = json.loads(array)
-                    template = os.path.join(dir_name, r'C:\Rasim\Python\ImageToPDF\Maket.docx')
-                    document = MailMerge(template)
-                    document.merge_rows('doctax_date', data['columns'])
-                    document.merge_rows('doctax_number', data['columns'])
-                    document.merge_rows('doctax_amount', data['columns'])
-                    document.merge_rows('doctax_sumtax', data['columns'])
-                    document.merge_rows('reg_number', data['columns'])
-                    document.merge(
-                        counterparty_code=word_source_df['counterparty_code'][0],
-                        total_sale=str(round(word_source_df['total_sale'].sum(), 2)).replace(".", ","),
-                        contracte_number=word_source_df['contracte_number'][0],
-                        contracte_date=word_source_df['contracte_date'][0],
-                        doc_sale_month=word_source_df['doc_sale_month'][0],
-                        doc_sale_year=word_source_df['doc_sale_year'][0],
-                        doc_sale_numbers=doc_numbers_sale,
-                        doc_sale_date=date,
-                        contracte_count_days=word_source_df['contracte_count_days'][0],
-                        counterpary=client_name,
-                        docTTN=doc_ttn,
-                        row=str(record_number),
-                        report_date='{:%d.%m.%Y}'.format(datetime.today())
-                    )
+                    single_parameters = {'doc_sale_numbers': doc_numbers_sale,
+                                         'doc_sale_date': date,
+                                         'counterpary': client_name,
+                                         'docTTN': doc_ttn,
+                                         'row': str(record_number),
+                                         'save_to_dir': save_to_dir,
+                                         'dir_name': dir_name,
+                                         'date':date
+                                         }
 
+                    merge_word(word_source_df, single_parameters)
                     record_number = record_number + 1
-                    word_file = str(Path(os.path.join(save_to_dir, fr"{date}.docx")))
-                    pdf_file = str(Path(os.path.join(save_to_dir, fr"{date}.pdf")))
-                    document.write(word_file)  # saving file
-                    word_2_pdf(word_file, pdf_file)
-                    print('**************************\n', date)
 
     except Exception as e:
         err_info = "Error: Main: %s" % e
@@ -152,4 +171,4 @@ def cycle_for_dates(excel_file_source):
 if __name__ == '__main__':
     extension = ['*.pdf']
     excel_file_source = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЄВРО СМАРТ ПАУЕР\ТОВ ЄВРО СМАРТ ПАУЕР.xlsx"
-    cycle_for_dates(excel_file_source)
+    merge_files_to_one(excel_file_source)

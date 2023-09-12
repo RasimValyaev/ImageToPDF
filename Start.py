@@ -4,7 +4,7 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 
-from Main import cycle_for_dates
+from Main import merge_files_to_one
 
 root = Tk()
 root.title("Prestige")
@@ -22,7 +22,7 @@ text_editor.grid(column=0, columnspan=1, row=0)
 def open_file():
     excel_file_source = filedialog.askopenfilename(filetypes=[("Excel files", ["*.xls", "*.xlsx"])])
     if excel_file_source != '':
-        cycle_for_dates(excel_file_source)
+        merge_files_to_one(excel_file_source)
 
 
 open_button = ttk.Button(text="Открыть файл", command=open_file)

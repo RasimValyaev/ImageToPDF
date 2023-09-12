@@ -1,0 +1,12 @@
+*.log
+*.pyd
+*.xml
+*.iml
+*.png
+*.jpg
+*.xls*
+/.idea/
+*.spec
+/venv
+/docx-template
+__init__.*

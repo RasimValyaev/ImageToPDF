@@ -337,7 +337,7 @@ def edit_excel_and_return_df(excel_file):
             df_merge = df
             df_merge['doc_type'] = None
 
-        df_merge = df_merge.sort_values("датаРеализации")
+        df_merge = df_merge.sort_values("Дата_складання_ПН/РК")
         df_merge = convert_date_to_str_df(df_merge, 'датаРеализации')
         df_merge = convert_date_to_str_df(df_merge, 'Дата_складання_ПН/РК')
         df_merge = convert_date_to_str_df(df_merge, 'Дата_реєстрації_ПН/РК_в_ЄРПН')

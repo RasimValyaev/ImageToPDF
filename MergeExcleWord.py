@@ -13,10 +13,12 @@
 
 import re
 import os
+import sys
 import numpy as np
 import pandas as pd
 import os.path
 import xlrd
+from pathlib import Path
 from pathvalidate import sanitize_filepath
 from datetime import datetime
 from mailmerge import MailMerge
@@ -30,7 +32,7 @@ pd.set_option('float_format', '{:.2f}'.format)
 MONTH = ['січні', 'лютому', 'березні', 'квітні', 'травні', 'червні', 'липні', 'серпні', 'вересні', 'жовтні',
          'листопаду', 'грудні']
 
-NUMBER_FIRST = 149 + 1  # номер заявления начинается с этого числа
+NUMBER_FIRST = 1  # номер заявления начинается с этого числа
 
 
 def counterparty_name_add_to_df(path_to_file_excel):
@@ -123,46 +125,49 @@ def doc_contract_details_add_to_df(df):
     return df
 
 
-def merge_excel_and_word(path_to_file_excel):
-    df = pd.read_excel(path_to_file_excel, sheet_name='df')
+def merge_excel_and_word(excel_file_source):
+    df = pd.read_excel(excel_file_source, sheet_name='df')
     df = df.astype(str)
     dirname = os.path.dirname(excel_file_source)
-    template = os.path.join(dirname, 'maket.docx')
+    template = r"C:\Rasim\Python\ImageToPDF\Maket.docx"
 
     for i, row in df.iterrows():
-        record_number = str(int(i) + NUMBER_FIRST)
+        record_number = str(row['Лист_пояснення'])
         document = MailMerge(template)
-        # print(document.get_merge_fields())
+        date_claim = '{:%d.%m.%Y}'.format(datetime.today())
         document.merge(
-            reg_number=row['Реєстраційний_номер'],
-            doc_tax_number=row['Порядковий_№_ПН/РК'],
-            doc_tax_date=row['Дата_складання_ПН/РК'],
             counterparty_code=row['Податковий_номер_Покупця'],
-            sum_sale=row['Обсяг_операцій'].replace(".", ","),
-            sum_tax=row['Сумв_ПДВ'].replace(".", ","),
+            total_sale=row['Обсяг_операцій'].replace(".", ","),
             contracte_number=row['договорНомер'],
             contracte_date=row['договорДата'],
-            doc_sale_month=row['месяц'].lower(),
+            doc_sale_month=row['месяц'],
             doc_sale_year=row['год'],
-            doc_sale_number=row['номерРеализации'],
+            doc_sale_numbers=row['номерРеализации'],
             doc_sale_date=row['датаРеализации'],
             contracte_count_days=row['договорДней'],
             counterpary=row['контрагент1С'],
+            docTTN= f"Товаро транспортна накладна № {row['номерРеализации']} від {row['датаРеализации']} р.",
             row=record_number,
-            report_date='{:%d.%m.%Y}'.format(datetime.today())
+            report_date='{:%d.%m.%Y}'.format(datetime.today()),
+            doctax_date=row['Дата_складання_ПН/РК'],
+            doctax_number=row['Порядковий_№_ПН/РК'],
+            doctax_amount=row['Обсяг_операцій'].replace(".", ","),
+            doctax_sumtax=row['Сумв_ПДВ'].replace(".", ","),
+            reg_number=row['Реєстраційний_номер']
         )
 
         save_to_dir = (os.path.join(dirname, sanitize_filepath(row['контрагент1С'])))
         if not os.path.isdir(save_to_dir):
             os.mkdir(save_to_dir)
 
-        # word_file = save_to_dir + fr'/{i + 1}.docx'
+        # word_file = os.path.join(save_to_dir, fr"{date_claim}.docx")
+        # pdf_file = os.path.join(save_to_dir, fr"{date_claim}.pdf")
         word_file = os.path.join(save_to_dir, fr"{row['pdf_filename']}.docx")
         pdf_file = os.path.join(save_to_dir, fr"{row['pdf_filename']}.pdf")
 
         document.write(word_file)  # saving file
         word_2_pdf(word_file, pdf_file)
-        os.remove(word_file)
+        # os.remove(word_file)
 
 
 def doc_sale_details_add_to_df(df):
@@ -211,13 +216,15 @@ def add_other_parameters_to_df(excel_file):
                 if len(df) > 0:
                     df = doc_contract_details_add_to_df(df)
                     if len(df) > 0:
+                        today = datetime.today().strftime("%d.%m.%Y")
                         df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
+                        df['Лист_пояснення'] = df.index + 1
                         df['pdf_filename'] = df.index + NUMBER_FIRST
-                        df['pdf_filename'] = df['pdf_filename'].apply('{:0>5}'.format)
+                        # df['pdf_filename'] = df['pdf_filename'].apply('{:0>5}'.format)
                         df.astype(str)
                         df['pdf_filename'] = pd.concat(
                             ["Лист пояснення " + df['pdf_filename'].astype(str) + " до " + df[
-                                r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str)])
+                                r'Дата складання ПН/РК'].astype(str) + " від " + today])
                         df = get_validcolumns_name(df)
                         df = df.astype(str)
                         try:
@@ -312,14 +319,17 @@ def edit_excel_and_return_df(excel_file):
         df_merge.fillna('')
         # df.to_excel('output.xlsx', engine='openpyxl')  # For .xlsx files
         # df.to_excel('output.xls', engine='xlwt')  # For .xls files
-
-        with pd.ExcelWriter(excel_file, mode='a', if_sheet_exists='replace') as writer:
+        save_as = Path(Path(excel_file).parent, Path(excel_file).stem + '_new' + Path(excel_file).suffix)
+        # with pd.ExcelWriter(save_as, mode='a', if_sheet_exists='new') as writer:
+        #     df_merge.to_excel(writer, sheet_name='df', index=False)
+        with pd.ExcelWriter(save_as) as writer:
             df_merge.to_excel(writer, sheet_name='df', index=False)
 
     except Exception as e:
         err_info = "Error: MergeExcleWord: %s" % e
         if e.args[0] == 13:
             print("Закройте файл {}".format(excel_file))
+            sys.exit(0)
         else:
             print(err_info)
 
@@ -328,7 +338,8 @@ def edit_excel_and_return_df(excel_file):
 
 
 if __name__ == '__main__':
-    excel_file_source = r"\\PrestigeProduct\Scan\ДЕЛІКАТ - Copy\ТОВ ДЕЛІКАТ РИТЕЙЛ\ДЕЛІКАТ РИТЕЙЛ.xlsx"
-    df_merge, pdf_files_df = edit_excel_and_return_df(excel_file_source)
-    print(df_merge)
-    print(pdf_files_df)
+    # excel_file_source = r"c:\Users\Rasim\Desktop\Scan\ДЕЛІКАТ РИТЕЙЛ\ДЕЛІКАТ РИТЕЙЛ.xlsx"
+    # df_merge, pdf_files_df = edit_excel_and_return_df(excel_file_source)
+    # print(df_merge)
+    # print(pdf_files_df)
+    merge_excel_and_word(r"c:\Users\Rasim\Desktop\Scan\ДЕЛІКАТ РИТЕЙЛ\ДЕЛІКАТ РИТЕЙЛ_new.xlsx")

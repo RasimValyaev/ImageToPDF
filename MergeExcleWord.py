@@ -144,10 +144,15 @@ def merge_excel_and_word(source_from_excel_df, pdf_df):
 
     for i, row in source_from_excel_df.iterrows():
         doc_number = row['номерРеализации']
-        docnumber_invoice = get_doctype_by_docnumber(pdf_df, doc_number, 'ВН')
-        docnumber_transport = get_doctype_by_docnumber(pdf_df, doc_number, 'ТТН')
-        if docnumber_transport != '':
-            docnumber_transport = f"Товаро транспортна накладна № {docnumber_transport} від {row['датаРеализации']} р."
+        number_invoice = get_doctype_by_docnumber(pdf_df, doc_number, 'ВН')
+        number_transport = get_doctype_by_docnumber(pdf_df, doc_number, 'ТТН')
+
+        if number_transport != '':
+            number_transport = f"Товаро транспортна накладна № {number_transport} від {row['датаРеализации']} р."
+
+        if number_invoice == '' and number_transport == '':
+            continue
+
         record_number = str(row['Лист_пояснення'])
         document = MailMerge(template)
         document.merge(
@@ -157,11 +162,11 @@ def merge_excel_and_word(source_from_excel_df, pdf_df):
             contracte_date=row['договорДата'],
             doc_sale_month=row['месяц'],
             doc_sale_year=row['год'],
-            doc_sale_numbers=docnumber_invoice,
+            doc_sale_numbers=number_invoice,
             doc_sale_date=row['датаРеализации'],
             contracte_count_days=row['договорДней'],
             counterpary=row['контрагент1С'],
-            docTTN=docnumber_transport,
+            docTTN=number_transport,
             row=record_number,
             report_date='{:%d.%m.%Y}'.format(datetime.today()),
             doctax_date=row['Дата_складання_ПН/РК'],

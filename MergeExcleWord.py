@@ -144,8 +144,12 @@ def merge_excel_and_word(source_from_excel_df, pdf_df):
 
     for i, row in source_from_excel_df.iterrows():
         doc_number = row['номерРеализации']
-        number_invoice = get_doctype_by_docnumber(pdf_df, doc_number, 'ВН')
-        number_transport = get_doctype_by_docnumber(pdf_df, doc_number, 'ТТН')
+        if len(pdf_df) > 0:
+            number_invoice = get_doctype_by_docnumber(pdf_df, doc_number, 'ВН')
+            number_transport = get_doctype_by_docnumber(pdf_df, doc_number, 'ТТН')
+        else:
+            number_invoice = ''
+            number_transport = ''
 
         if number_transport != '':
             number_transport = f"Товаро транспортна накладна № {number_transport} від {row['датаРеализации']} р."
@@ -218,13 +222,18 @@ def get_validcolumns_name(df):
     return df
 
 
+def create_new_excel(excel_file):
+    filename, file_extension = os.path.splitext(excel_file.lower())
+    if file_extension == '.xls':
+        excel_file = convert_xls_to_xlsx(excel_file)
+
+    return excel_file
+
+
 def add_other_parameters_to_df(excel_file):
     df = pd.DataFrame()
     try:
-        filename, file_extension = os.path.splitext(excel_file.lower())
-        if file_extension == '.xls':
-            excel_file = convert_xls_to_xlsx(excel_file)
-
+        excel_file = create_new_excel(excel_file)
         df = counterparty_name_add_to_df(excel_file)
         if len(df) > 0:
             df = doc_tax_details_add_to_df(df)
@@ -313,6 +322,7 @@ def convert_date_to_str_df(df, column_name):
 def edit_excel_and_return_df(excel_file):
     df_merge = pd.DataFrame()
     pdf_files_df = pd.DataFrame()
+    excel_file = create_new_excel(excel_file)
     try:
         dir_name = os.path.dirname(excel_file)
         df = add_other_parameters_to_df(excel_file)
@@ -332,7 +342,7 @@ def edit_excel_and_return_df(excel_file):
         df_merge = convert_date_to_str_df(df_merge, 'Дата_складання_ПН/РК')
         df_merge = convert_date_to_str_df(df_merge, 'Дата_реєстрації_ПН/РК_в_ЄРПН')
         df_merge = convert_date_to_str_df(df_merge, 'договорДата')
-        df_merge.rename(columns={'doc_type': 'doc_type_list'})
+        # df_merge.rename(columns={'doc_type': 'doc_type_list'})
         df_merge.fillna('')
         save_as = Path(Path(excel_file).parent, Path(excel_file).stem + '_new' + Path(excel_file).suffix)
         # with pd.ExcelWriter(save_as, mode='a', if_sheet_exists='new') as writer:
@@ -353,7 +363,7 @@ def edit_excel_and_return_df(excel_file):
 
 
 if __name__ == '__main__':
-    excel_file_source = r"c:\Users\Rasim\Desktop\Scan\ДЕЛІКАТ РИТЕЙЛ\ДЕЛІКАТ РИТЕЙЛ.xlsx"
+    excel_file_source = r"c:\Users\Rasim\Desktop\Scan\7\Копия Копия export - 2023-09-12T092044.140.xls"
     df_merge, pdf_files_df = edit_excel_and_return_df(excel_file_source)
     # print(df_merge)
     # print(pdf_files_df)

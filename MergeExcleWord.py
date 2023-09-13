@@ -318,7 +318,10 @@ def edit_excel_and_return_df(excel_file):
 
     except Exception as e:
         err_info = "Error: MergeExcleWord: %s" % e
-        print(err_info)
+        if e.args[0] == 13:
+            print("Закройте файл {}".format(excel_file))
+        else:
+            print(err_info)
 
     finally:
         return df_merge, pdf_files_df

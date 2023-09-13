@@ -246,7 +246,7 @@ def add_other_parameters_to_df(excel_file):
                         df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
                         df['Лист_пояснення'] = df.index + 1
                         df['pdf_filename'] = df.index + NUMBER_FIRST
-                        # df['pdf_filename'] = df['pdf_filename'].apply('{:0>5}'.format)
+                        df['pdf_filename'] = df['pdf_filename'].apply('{:0>5}'.format)
                         df.astype(str)
                         df['pdf_filename'] = pd.concat(
                             ["Лист пояснення " + df['pdf_filename'].astype(str) + " до " + df[

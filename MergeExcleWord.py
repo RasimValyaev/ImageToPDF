@@ -196,14 +196,14 @@ def get_validcolumns_name(df):
     return df
 
 
-def add_other_parameters_to_df(excel_file_source):
+def add_other_parameters_to_df(excel_file):
     df = pd.DataFrame()
     try:
-        filename, file_extension = os.path.splitext(excel_file_source.lower())
+        filename, file_extension = os.path.splitext(excel_file.lower())
         if file_extension == '.xls':
-            excel_file_source = convert_xls_to_xlsx(excel_file_source)
+            excel_file = convert_xls_to_xlsx(excel_file)
 
-        df = counterparty_name_add_to_df(excel_file_source)
+        df = counterparty_name_add_to_df(excel_file)
         if len(df) > 0:
             df = doc_tax_details_add_to_df(df)
             if len(df) > 0:

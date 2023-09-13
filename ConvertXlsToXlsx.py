@@ -3,8 +3,8 @@ from pathlib import Path
 import win32com.client as win32
 
 
-def convert_xls_to_xlsx(xls_path) -> str:
-    path = Path(xls_path)
+def convert_xls_to_xlsx(xls_dir) -> str:
+    path = Path(xls_dir)
     excel = win32.gencache.EnsureDispatch('Excel.Application')
     wb = excel.Workbooks.Open(path.absolute())
 
@@ -22,4 +22,4 @@ if __name__ == '__main__':
     xls_path = r"c:\Users\Rasim\Desktop\Scan\ТОВ ЛЕГІОН 2015\Написать письмо\Копия ЛЕГІОН 2015.xls"
     print('xls_path', xls_path)
     xlsx_path = convert_xls_to_xlsx(xls_path)
-    print('xlsx_path',xlsx_path)
+    print('xlsx_path', xlsx_path)

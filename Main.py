@@ -56,7 +56,7 @@ def merge_word(word_source_df, single_parameters, merge_to_group=True):
         word_file = str(Path(os.path.join(save_to_dir, fr"{date}.docx")))
         pdf_file = str(Path(os.path.join(save_to_dir, fr"{date}.pdf")))
     else:
-        word_file = str(Path(os.path.join(save_to_dir, fr"{word_source_df['pdf_filename'],values[0]}.docx")))
+        word_file = str(Path(os.path.join(save_to_dir, fr"{word_source_df['pdf_filename'].values[0]}.docx")))
         pdf_file = str(Path(os.path.join(save_to_dir, fr"{date}.pdf")))
     document.write(word_file)  # saving file
     word_2_pdf(word_file, pdf_file)
@@ -64,12 +64,12 @@ def merge_word(word_source_df, single_parameters, merge_to_group=True):
 
 
 # создаем папки по циклу согласно типу_док и дате, и извлекаем туда изображения из pdf
-def merge_files_to_one(excel_file_source):
+def merge_files_to_one(excel_file):
     try:
-        df_exl, df_pdf = edit_excel_and_return_df(excel_file_source)
+        df_exl, df_pdf = edit_excel_and_return_df(excel_file)
         if len(df_exl) == 0 or len(df_pdf) == 0:
             sys.exit(0)
-        dir_name = os.path.dirname(excel_file_source)
+        dir_name = os.path.dirname(excel_file)
         df_pdf = convert_date_to_str_df(df_pdf, 'датаРеализации')
         doc_types = df_pdf['doc_type'].unique()
         client_okpo_list = df_exl['Податковий_номер_Покупця'].unique()
@@ -139,8 +139,8 @@ def merge_files_to_one(excel_file_source):
                             os.makedirs(pdf_save_to_path)
 
                         # extract images from pdf to image_save_to_path
-                        for i, row in df_pdf_data_doctyoe.iterrows():
-                            extract_image(row.filename, image_save_to_path)
+                        for j, rw in df_pdf_data_doctyoe.iterrows():
+                            extract_image(rw.filename, image_save_to_path)
 
                         add_image_to_pdf(image_save_to_path, pdf_save_to_path)  # add image to pdf
 
@@ -154,7 +154,7 @@ def merge_files_to_one(excel_file_source):
                                          'row': str(record_number),
                                          'save_to_dir': save_to_dir,
                                          'dir_name': dir_name,
-                                         'date':date
+                                         'date': date
                                          }
 
                     merge_word(word_source_df, single_parameters)

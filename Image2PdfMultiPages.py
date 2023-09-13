@@ -12,7 +12,7 @@ from ImageCompressed import compress_img
 Image.MAX_IMAGE_PIXELS = None
 
 
-def add_image_to_pdf(image_directory, save_to_path):
+def add_image_to_pdf(image_path, save_to_path):
     try:
 
         # path = Path(image_directory)
@@ -23,7 +23,7 @@ def add_image_to_pdf(image_directory, save_to_path):
         pdf = FPDF()
         imagelist = []
         for ext in extensions:
-            imagelist.extend(glob.glob(os.path.join(image_directory, ext)))
+            imagelist.extend(glob.glob(os.path.join(image_path, ext)))
 
         for image_file in imagelist:
             cover = Image.open(image_file)
@@ -49,7 +49,7 @@ def add_image_to_pdf(image_directory, save_to_path):
             print('size ok')
             pass
 
-        pdf_file = re.split(r'\\', image_directory)[-2] + ' ' + re.split(r'\\', image_directory)[-1]
+        pdf_file = re.split(r'\\', image_path)[-2] + ' ' + re.split(r'\\', image_path)[-1]
         save_as = os.path.join(save_to_path, pdf_file + ".pdf")
         pdf.output(save_as, "F")
 

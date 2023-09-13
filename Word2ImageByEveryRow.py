@@ -17,5 +17,6 @@ def convert_to_png(filename):
             image.save(f'output_{i}.png')
 
 
-filename = r'C:\Rasim\Python\Prestige\TelegramBot\001694007370.docx'
-convert_to_png(filename)
+if __name__ == '__main__':
+    file_name = r'C:\Rasim\Python\Prestige\TelegramBot\001694007370.docx'
+    convert_to_png(file_name)

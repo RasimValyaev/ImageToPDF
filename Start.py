@@ -5,6 +5,7 @@ from tkinter import ttk
 from tkinter import filedialog
 
 from Main import merge_files_to_one
+from MergeExcleWord import merge_excle_word_main
 
 root = Tk()
 root.title("Prestige")
@@ -22,7 +23,8 @@ text_editor.grid(column=0, columnspan=1, row=0)
 def open_file():
     excel_file_source = filedialog.askopenfilename(filetypes=[("Excel files", ["*.xls", "*.xlsx"])])
     if excel_file_source != '':
-        merge_files_to_one(excel_file_source)
+        print("Вы выбрали файл", excel_file_source)
+        merge_excle_word_main(excel_file_source)
 
 
 open_button = ttk.Button(text="Открыть файл", command=open_file)

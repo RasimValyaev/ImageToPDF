@@ -4,9 +4,10 @@ import win32com.client as win32
 
 def word_2_pdf(in_file_word, out_file_pdf):
     try:
+        wdFormatPDF = 17
         word = win32.DispatchEx("Word.Application")
         doc = word.Documents.Open(in_file_word)
-        doc.SaveAs(out_file_pdf, FileFormat=17)
+        doc.SaveAs(out_file_pdf, FileFormat=wdFormatPDF) # or FileFormat=17
         doc.Close()
         word.Quit()
 

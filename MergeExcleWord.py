@@ -145,7 +145,7 @@ def get_doctype_by_docnumber(pdf_file_names: pd.DataFrame(), look_number: str, d
 def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir):
     # df = pd.read_excel(excel_file_source, sheet_name='df')
     source_from_excel_df = source_from_excel_df.astype(str)
-    template = r"C:\Rasim\Python\ImageToPDF\Maket.docx"
+    template = r"\\PRESTIGEPRODUCT\Scan\Maket.docx"
 
     for i, row in source_from_excel_df.iterrows():
         try:

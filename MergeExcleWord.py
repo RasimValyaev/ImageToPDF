@@ -42,7 +42,7 @@ def counterparty_name_add_to_df(path_to_file_excel):
         df = pd.read_excel(path_to_file_excel, sheet_name=0)
         np.round(df, decimals=2)
         df['контрагент1С'] = None
-        df['контрагент1Сuuid'] = None
+        df['counterparty_key'] = None
 
         if df['Дата складання ПН/РК'].dtype in ['int64', 'float64']:
             df["Дата складання ПН/РК"] = df["Дата складання ПН/РК"].map(lambda x: datetime(*xlrd.xldate_as_tuple(x, 0)))
@@ -62,7 +62,7 @@ def counterparty_name_add_to_df(path_to_file_excel):
                     client_uuid, client_name = counterparty
                     print(client_name)
                     df.loc[df['Податковий номер Покупця'] == tax_code, 'контрагент1С'] = client_name
-                    df.loc[df['Податковий номер Покупця'] == tax_code, 'контрагент1Сuuid'] = client_uuid
+                    df.loc[df['Податковий номер Покупця'] == tax_code, 'counterparty_key'] = client_uuid
             except Exception as e:
                 print(str(e))
 
@@ -91,19 +91,19 @@ def get_contract(search_doc, list_doc):
 def doc_tax_details_add_to_df(df):
     # Search uuid_contracte by date fatura and client_uuid
     df['contract_key'] = None
-    df['doc_sale_key'] = None
+    df['invoice_key'] = None
     df['номерНН_оригинал'] = None
     for i, row in df.iterrows():
         if i == 27:
             print("ok")
         try:
             date_doc_tax = row['Дата складання ПН/РК']
-            client_uuid = row['контрагент1Сuuid']
+            client_uuid = row['counterparty_key']
             list_of_fatura = get_list_of_tax_fatura(date_doc_tax, client_uuid)
             tax_doc_details = get_contract(row['Порядковий № ПН/РК'], list_of_fatura)
             df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'номерНН_оригинал'] = tax_doc_details[
                 'Number']
-            df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'doc_sale_key'] = tax_doc_details[
+            df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'invoice_key'] = tax_doc_details[
                 'ДокументОснование']
             df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'contract_key'] = tax_doc_details[
                 'ДоговорКонтрагента_Key']
@@ -162,10 +162,13 @@ def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir):
                 number_transport = ''
 
             if number_invoice != '':
-                number_invoice = f"Видаткова накладна № {number_transport} від {row['датаРеализации']} р."
+                doc_sale_header = number_invoice
+                number_invoice = f"Видаткова накладна № {number_invoice} від {row['датаРеализации']} р."
             else:
                 if number_transport != '':
-                    doc_dale_header = f"Видаткова накладна № {number_transport} від {row['датаРеализации']} р."
+                    doc_sale_header = number_transport
+                else:
+                    doc_sale_header = ''
 
             if number_transport != '':
                 number_transport = f"Товаро транспортна накладна № {number_transport} від {row['датаРеализации']} р."
@@ -182,10 +185,11 @@ def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir):
                 contracte_date=row['договорДата'],
                 doc_sale_month=row['месяц'],
                 doc_sale_year=row['год'],
-                doc_sale_numbers=number_invoice,
+                doc_sale_header=doc_sale_header,
+                doc_sale_number=doc_sale_header,
+                number_invoice=number_invoice,
                 doc_sale_date=row['датаРеализации'],
                 contracte_count_days=row['договорДней'],
-                number_invoice_header = doc_dale_header,
                 counterpary=row['контрагент1С'],
                 docTTN=number_transport,
                 row=record_number,
@@ -212,20 +216,21 @@ def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir):
         except Exception as e:
             print(str(e))
 
+
 def doc_sale_details_add_to_df(df):
     df['год'] = None
     df['месяц'] = None
     df['номерРеализации'] = None
     df['датаРеализации'] = None
     for i, row in df.iterrows():
-        doc_sale_uuid = row['doc_sale_key']
+        doc_sale_uuid = row['invoice_key']
         doc_sale_details = get_doc_sale_details(doc_sale_uuid)
         doc_sale_month_idx = datetime.strptime(doc_sale_details['Date'], "%Y-%m-%dT%H:%M:%S").month
         doc_sale_month = MONTH[doc_sale_month_idx - 1]
-        df.loc[df['doc_sale_key'] == row['doc_sale_key'], 'номерРеализации'] = int(
+        df.loc[df['invoice_key'] == row['invoice_key'], 'номерРеализации'] = int(
             re.findall(r"\d*", doc_sale_details['Number'])[2])
-        df.loc[df['doc_sale_key'] == row['doc_sale_key'], 'датаРеализации'] = doc_sale_details['Date']
-        df.loc[df['doc_sale_key'] == row['doc_sale_key'], 'месяц'] = doc_sale_month
+        df.loc[df['invoice_key'] == row['invoice_key'], 'датаРеализации'] = doc_sale_details['Date']
+        df.loc[df['invoice_key'] == row['invoice_key'], 'месяц'] = doc_sale_month
 
     df['год'] = pd.to_datetime(df['датаРеализации']).dt.year
     df['датаРеализации'] = pd.to_datetime(df['датаРеализации']).dt.strftime('%d.%m.%Y')
@@ -266,7 +271,7 @@ def add_other_parameters_to_df(excel_file):
                     df = doc_contract_details_add_to_df(df)
                     if len(df) > 0:
                         today = datetime.today().strftime("%d.%m.%Y")
-                        df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
+                        # df = df.drop(columns=['counterparty_key', 'contract_key', 'invoice_key'])
                         df['Лист_пояснення'] = df.index + 1
                         df['pdf_filename'] = df.index + NUMBER_FIRST
                         df['pdf_filename'] = df['pdf_filename'].apply('{:0>5}'.format)
@@ -302,17 +307,17 @@ def get_pdf_set_with_date_in_file_name(directory):
     doc_number_list = []
     for filename in os.listdir(directory):
         try:
-            if re.search(ext, filename):
+            if re.search(r"^(ВН|ТТН)" + ".*" + ext, filename):
                 file_list.append(os.path.join(directory, filename))
                 doc_type_list.append(re.search('[а-яА-ЯёЁa-zA-Z]+', filename)[0])
                 date_raw = re.search(date_pattern, filename)
                 if date_raw:
-                    date = date_raw[0].replace(",", ".")
+                    date = re.sub(r"[_,-]", ".", date_raw[0])
                     date_list.append(date)
                 else:
                     continue
 
-                doc_number = re.search(" \d+ ", filename)
+                doc_number = re.search("\d+ ", filename)
                 if doc_number:
                     doc_number_list.append(int(re.search(" \d+ ", filename)[0]))
                 else:
@@ -328,7 +333,8 @@ def get_pdf_set_with_date_in_file_name(directory):
     df = pd.DataFrame(data)
     if len(df) > 0:
         df['датаРеализации'] = df['датаРеализации'].apply(pd.to_datetime, format='%d.%m.%Y')
-
+        rowlist = ['ВН', 'ТТН', 'BH', 'TTH']
+        df = df[df['doc_type'].isin(rowlist)]
     return df
 
 
@@ -392,6 +398,5 @@ def merge_excle_word_main(excel_file):
 
 
 if __name__ == '__main__':
-    # excel_file_source = r"c:\Users\Rasim\Desktop\Scan\Континент\Old\Копия export - 2023-09-14T113528.836.xls"
-    excel_file_source = r"c:\Users\Rasim\Desktop\Scan\Маркет позитив плюс\Маркет позитив плюс.xls"
+    excel_file_source = r"c:\Users\Rasim\Desktop\Scan\Левайс\Левайс.xls"
     merge_excle_word_main(excel_file_source)

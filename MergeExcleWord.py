@@ -245,7 +245,7 @@ def get_pdf_set_with_date_in_file_name(directory):
     df['doc_type'] = df['name'].str.extract(doc_type_ptrn, expand=False).str.strip().reset_index(drop=True)
     df['номерРеализации'] = df[df['doc_type'] != 'БВ']['name'].str.extract(r"(\d+)", expand=False).str.strip()
     # df.fillna(0, inplace=True)
-    df['номерРеализации'] = df['номерРеализации'].astype(pd.Int64Dtype()) #.astype('int64')
+    df['номерРеализации'] = df['номерРеализации'].astype(pd.Int64Dtype())  # .astype('int64')
     counterparty_date_payment = df[df['doc_type'].str.contains('|'.join(['БВ', 'БB']))][
         'датаРеализации'].sort_values().tolist()
     df_doc = df[df['doc_type'].str.contains('|'.join(['РН', 'PH', 'ВН', 'BH', 'TTH', 'ТТН']))][
@@ -264,7 +264,7 @@ def convert_date_to_str_df(df, column_name):
 
 # source_from_excel_df = df with data Vika + add other columns
 # pdf_df - pdf file names (ВН, ТТН)
-def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir):
+def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir, date_of_payments):
     # df = pd.read_excel(excel_file_source, sheet_name='df')
     source_from_excel_df = source_from_excel_df.astype(str)
     template = r"\\PRESTIGEPRODUCT\Scan\Maket.docx"
@@ -320,7 +320,8 @@ def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir):
                 doctax_number=row['Порядковий_№_ПН/РК'],
                 doctax_amount=row['Обсяг_операцій'].replace(".", ","),
                 doctax_sumtax=row['Сумв_ПДВ'].replace(".", ","),
-                reg_number=row['Реєстраційний_номер']
+                reg_number=row['Реєстраційний_номер'],
+                payments=date_of_payments
             )
 
             save_to_dir = (os.path.join(excel_dir, sanitize_filepath(row['контрагент1С'])))
@@ -341,15 +342,11 @@ def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir):
 
 # create sheet "df" in current file_excel
 # if there are pdf files on current folder added doc_type in Excel
-def edit_excel_and_return_df(excel_file):
+def edit_excel_and_return_df(excel_file, pdf_files_df):
     df_merge = pd.DataFrame()
-    pdf_files_df = pd.DataFrame()
     excel_file = create_new_excel(excel_file)
     try:
-        dir_name = os.path.dirname(excel_file)
         df = add_other_parameters_to_df(excel_file)
-        pdf_files_df, paying_to_bank = get_pdf_set_with_date_in_file_name(
-            dir_name)  # dataframe with pdf filenames from folder with excel_file_source
         if len(pdf_files_df) > 0:  # the sheet "df" need create also if isn't files of pdf
             type_of_docs_df = pdf_files_df.groupby(['датаРеализации', 'номерРеализации'],
                                                    as_index=False)['doc_type'].agg(list)
@@ -381,15 +378,33 @@ def edit_excel_and_return_df(excel_file):
             print(err_info)
 
     finally:
-        return df_merge.astype(str), pdf_files_df.astype(str)
+        return df_merge.astype(str)
+
+
+def get_bank_statement(date_of_payments):
+    result = ''
+    size = len(date_of_payments)
+    for i, date in enumerate(date_of_payments):
+        if i != (size - 1):
+            result += f"{i + 4}. Банківська виписка від {'{:%d.%m.%Y}'.format(date)}р.\n"
+        else:
+            result += f"{i + 4}. Банківська виписка від {'{:%d.%m.%Y}'.format(date)}р."
+    else:
+        print("Выписки банка в формате pdf в текущем каталоге не обнаружены")
+    return result
 
 
 def merge_excle_word_main(excel_file):
     if not os.path.exists(excel_file):
         print("Не найден Excel файл", excel_file)
+        sys.exit(0)
+        
     excel_dir = Path(os.path.dirname(excel_file))
-    df_merge, pdf_files_df = edit_excel_and_return_df(excel_file)
-    merge_excel_and_word(df_merge, pdf_files_df, excel_dir)
+    pdf_files_df, date_of_payment = get_pdf_set_with_date_in_file_name(excel_dir)
+    date_of_payments = get_bank_statement(date_of_payment)
+    df_merge = edit_excel_and_return_df(excel_file, pdf_files_df)
+    pdf_files_df = pdf_files_df.astype(str)
+    merge_excel_and_word(df_merge, pdf_files_df, excel_dir, date_of_payments)
 
 
 if __name__ == '__main__':

@@ -33,5 +33,5 @@ def scan_folder(folder_path):
 
 if __name__ == '__main__':
     # path_to_folder = r'\\PRESTIGEPRODUCT\Scan\ЕСП'
-    path_to_folder = r"C:\Users\rasim\Desktop\Excel\7"
+    path_to_folder = r"C:\Users\Rasim\Desktop\Scan\Маркет позитив плюс"
     scan_folder(path_to_folder)

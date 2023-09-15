@@ -59,6 +59,6 @@ if __name__ == "__main__":
     # Parsing command line arguments entered by user
     # input_file = sys.argv[1]
     # output_file = sys.argv[2]
-    file_input = r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\РН\2023.03.24\РН 2023.03.24.pdf"
-    file_output = r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\РН\2023.03.24\РН 2023.03.24_compr.pdf"
+    file_input = r"\\PRESTIGEPRODUCT\Scan\Маркет позитив плюс\ТТН 13606 05.05.2023.pdf"
+    file_output = r"\\PRESTIGEPRODUCT\Scan\Маркет позитив плюс\ТТН 13606 05.05.2023 c.pdf"
     compress_file(file_input, file_output)

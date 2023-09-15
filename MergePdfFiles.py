@@ -22,7 +22,7 @@ def cycle_on_directory_files():
             print(str(e))
             continue
 
-    df_set = df[df['filename'].str.contains("_") == False]
+    df_set = df[df['filename'].str.contains("_") is False]
     df_set.reset_index(drop=True, inplace=True)
     print(df)
     print(df_set)
@@ -39,16 +39,16 @@ def merge_pdf(df, df_set):
         df_filter = df[df['filename'].str.contains(unq_file_name.filename)].values.tolist()
         for file_name in df_filter:
             file_path = os.path.join(image_path_source, file_name[0] + '.jpg')
-            input = aw.Document(file_path)
+            inp = aw.Document(file_path)
             # Append the source document to the end of the destination document.
-            output.append_document(input, aw.ImportFormatMode.KEEP_SOURCE_FORMATTING)
+            output.append_document(inp, aw.ImportFormatMode.KEEP_SOURCE_FORMATTING)
 
-        if df_filter != []:
+        if len(df_filter) != 0:
             new_file_path = os.path.join(image_path_source, 'PDF', unq_file_name)
             print(new_file_path + ".pdf")
             output.save(new_file_path + ".pdf")
 
 
 if __name__ == '__main__':
-    df, df_set = cycle_on_directory_files()
-    merge_pdf(df, df_set)
+    df1, df2 = cycle_on_directory_files()
+    merge_pdf(df1, df2)

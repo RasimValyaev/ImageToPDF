@@ -4,7 +4,6 @@
 # https://archit-narain.medium.com/how-to-merge-tables-to-word-documents-using-python-9786124a276b
 
 import json
-import pandas
 import pandas as pd
 from mailmerge import MailMerge
 
@@ -35,5 +34,5 @@ def merge_excel_and_word(df):
 
 if __name__ == '__main__':
     path_to_file_excel = r"c:\Users\Rasim\Desktop\Scan\РелайзКомпани\Релайз для разблокировки.xlsx"
-    df = pd.read_excel(path_to_file_excel, sheet_name=0)
-    merge_excel_and_word(df)
+    df_excel = pd.read_excel(path_to_file_excel, sheet_name=0)
+    merge_excel_and_word(df_excel)

@@ -13,10 +13,13 @@
 
 import re
 import os
+import sys
 import numpy as np
 import pandas as pd
 import os.path
 import xlrd
+from dateutil.parser import parse
+from pathlib import Path
 from pathvalidate import sanitize_filepath
 from datetime import datetime
 from mailmerge import MailMerge
@@ -30,7 +33,7 @@ pd.set_option('float_format', '{:.2f}'.format)
 MONTH = ['січні', 'лютому', 'березні', 'квітні', 'травні', 'червні', 'липні', 'серпні', 'вересні', 'жовтні',
          'листопаду', 'грудні']
 
-NUMBER_FIRST = 149 + 1  # номер заявления начинается с этого числа
+NUMBER_FIRST = 1  # номер заявления начинается с этого числа
 
 
 def counterparty_name_add_to_df(path_to_file_excel):
@@ -40,7 +43,7 @@ def counterparty_name_add_to_df(path_to_file_excel):
         df = pd.read_excel(path_to_file_excel, sheet_name=0)
         np.round(df, decimals=2)
         df['контрагент1С'] = None
-        df['контрагент1Сuuid'] = None
+        df['counterparty_key'] = None
 
         if df['Дата складання ПН/РК'].dtype in ['int64', 'float64']:
             df["Дата складання ПН/РК"] = df["Дата складання ПН/РК"].map(lambda x: datetime(*xlrd.xldate_as_tuple(x, 0)))
@@ -54,17 +57,17 @@ def counterparty_name_add_to_df(path_to_file_excel):
         set_customer_codes = df['Податковий номер Покупця'].unique().tolist()
 
         for tax_code in set_customer_codes:
-            if tax_code == 0:
-                print('stop')
             try:
                 counterparty = get_counterparty(tax_code)
                 if len(counterparty) > 1:
                     client_uuid, client_name = counterparty
                     print(client_name)
                     df.loc[df['Податковий номер Покупця'] == tax_code, 'контрагент1С'] = client_name
-                    df.loc[df['Податковий номер Покупця'] == tax_code, 'контрагент1Сuuid'] = client_uuid
+                    df.loc[df['Податковий номер Покупця'] == tax_code, 'counterparty_key'] = client_uuid
             except Exception as e:
                 print(str(e))
+
+        df = df[df['Обсяг операцій'] != 0.00]  # док корректировка не учитывать
 
     except Exception as e:
         print(str(e))
@@ -77,25 +80,31 @@ def get_contract(search_doc, list_doc):
     # за день выписано много НН (налогов накл)
     # df содержить их короткие номера.
     # функция по короткому номеру возвращает полный
+    contract_number = ''
     for item in list_doc:
         if str(search_doc) in item['Number']:
-            return item
+            contract_number = item
+            break
+
+    return contract_number
 
 
 def doc_tax_details_add_to_df(df):
     # Search uuid_contracte by date fatura and client_uuid
     df['contract_key'] = None
-    df['doc_sale_key'] = None
+    df['invoice_key'] = None
     df['номерНН_оригинал'] = None
     for i, row in df.iterrows():
+        if i == 27:
+            print("ok")
         try:
             date_doc_tax = row['Дата складання ПН/РК']
-            client_uuid = row['контрагент1Сuuid']
+            client_uuid = row['counterparty_key']
             list_of_fatura = get_list_of_tax_fatura(date_doc_tax, client_uuid)
             tax_doc_details = get_contract(row['Порядковий № ПН/РК'], list_of_fatura)
             df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'номерНН_оригинал'] = tax_doc_details[
                 'Number']
-            df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'doc_sale_key'] = tax_doc_details[
+            df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'invoice_key'] = tax_doc_details[
                 'ДокументОснование']
             df.loc[df['Порядковий № ПН/РК'] == row['Порядковий № ПН/РК'], 'contract_key'] = tax_doc_details[
                 'ДоговорКонтрагента_Key']
@@ -123,69 +132,38 @@ def doc_contract_details_add_to_df(df):
     return df
 
 
-def merge_excel_and_word(path_to_file_excel):
-    df = pd.read_excel(path_to_file_excel, sheet_name='df')
-    df = df.astype(str)
-    dirname = os.path.dirname(excel_file_source)
-    template = os.path.join(dirname, 'maket.docx')
-
-    for i, row in df.iterrows():
-        record_number = str(int(i) + NUMBER_FIRST)
-        document = MailMerge(template)
-        # print(document.get_merge_fields())
-        document.merge(
-            reg_number=row['Реєстраційний_номер'],
-            doc_tax_number=row['Порядковий_№_ПН/РК'],
-            doc_tax_date=row['Дата_складання_ПН/РК'],
-            counterparty_code=row['Податковий_номер_Покупця'],
-            sum_sale=row['Обсяг_операцій'].replace(".", ","),
-            sum_tax=row['Сумв_ПДВ'].replace(".", ","),
-            contracte_number=row['договорНомер'],
-            contracte_date=row['договорДата'],
-            doc_sale_month=row['месяц'].lower(),
-            doc_sale_year=row['год'],
-            doc_sale_number=row['номерРеализации'],
-            doc_sale_date=row['датаРеализации'],
-            contracte_count_days=row['договорДней'],
-            counterpary=row['контрагент1С'],
-            row=record_number,
-            report_date='{:%d.%m.%Y}'.format(datetime.today())
-        )
-
-        save_to_dir = (os.path.join(dirname, sanitize_filepath(row['контрагент1С'])))
-        if not os.path.isdir(save_to_dir):
-            os.mkdir(save_to_dir)
-
-        # word_file = save_to_dir + fr'/{i + 1}.docx'
-        word_file = os.path.join(save_to_dir, fr"{row['pdf_filename']}.docx")
-        pdf_file = os.path.join(save_to_dir, fr"{row['pdf_filename']}.pdf")
-
-        document.write(word_file)  # saving file
-        word_2_pdf(word_file, pdf_file)
-        os.remove(word_file)
-
-
 def doc_sale_details_add_to_df(df):
     df['год'] = None
     df['месяц'] = None
     df['номерРеализации'] = None
     df['датаРеализации'] = None
     for i, row in df.iterrows():
-        doc_sale_uuid = row['doc_sale_key']
+        doc_sale_uuid = row['invoice_key']
         doc_sale_details = get_doc_sale_details(doc_sale_uuid)
         doc_sale_month_idx = datetime.strptime(doc_sale_details['Date'], "%Y-%m-%dT%H:%M:%S").month
         doc_sale_month = MONTH[doc_sale_month_idx - 1]
-        df.loc[df['doc_sale_key'] == row['doc_sale_key'], 'номерРеализации'] = int(
+        df.loc[df['invoice_key'] == row['invoice_key'], 'номерРеализации'] = int(
             re.findall(r"\d*", doc_sale_details['Number'])[2])
-        df.loc[df['doc_sale_key'] == row['doc_sale_key'], 'датаРеализации'] = doc_sale_details['Date']
-        df.loc[df['doc_sale_key'] == row['doc_sale_key'], 'месяц'] = doc_sale_month
+        df.loc[df['invoice_key'] == row['invoice_key'], 'датаРеализации'] = doc_sale_details['Date']
+        df.loc[df['invoice_key'] == row['invoice_key'], 'месяц'] = doc_sale_month
 
     df['год'] = pd.to_datetime(df['датаРеализации']).dt.year
     df['датаРеализации'] = pd.to_datetime(df['датаРеализации']).dt.strftime('%d.%m.%Y')
+    # df = df.sort_values("Дата складання ПН/РК").reset_index(drop=True)
+
     return df
 
 
-def get_validcolumns_name(df):
+def get_doctype_by_invoice_number(pdf_file_names: pd.DataFrame(), look_number: str, doc_type: str):
+    doc_sale = pdf_file_names[(pdf_file_names['doc_type'] == doc_type)
+                              & (pdf_file_names['номерРеализации'] == look_number)]
+    if len(doc_sale) > 0:
+        return look_number
+    else:
+        return ''
+
+
+def get_valid_columns_name(df):
     new_columns = []
     for column in df.columns:
         valide_column_name = sanitize_filepath(column)
@@ -196,14 +174,20 @@ def get_validcolumns_name(df):
     return df
 
 
-def add_other_parameters_to_df(excel_file_source):
+# convert xls to  xlsx. if input Excel format = xls
+def create_new_excel(excel_file):
+    filename, file_extension = os.path.splitext(excel_file.lower())
+    if file_extension == '.xls':
+        excel_file = convert_xls_to_xlsx(excel_file)
+
+    return excel_file
+
+
+def add_other_parameters_to_df(excel_file):
     df = pd.DataFrame()
     try:
-        filename, file_extension = os.path.splitext(excel_file_source.lower())
-        if file_extension == '.xls':
-            excel_file_source = convert_xls_to_xlsx(excel_file_source)
-
-        df = counterparty_name_add_to_df(excel_file_source)
+        excel_file = create_new_excel(excel_file)
+        df = counterparty_name_add_to_df(excel_file)
         if len(df) > 0:
             df = doc_tax_details_add_to_df(df)
             if len(df) > 0:
@@ -211,19 +195,15 @@ def add_other_parameters_to_df(excel_file_source):
                 if len(df) > 0:
                     df = doc_contract_details_add_to_df(df)
                     if len(df) > 0:
-                        df = df.drop(columns=['контрагент1Сuuid', 'contract_key', 'doc_sale_key'])
+                        today = datetime.today().strftime("%d.%m.%Y")
+                        df['Лист_пояснення'] = df.index + 1
                         df['pdf_filename'] = df.index + NUMBER_FIRST
                         df['pdf_filename'] = df['pdf_filename'].apply('{:0>5}'.format)
-                        df.astype(str)
                         df['pdf_filename'] = pd.concat(
                             ["Лист пояснення " + df['pdf_filename'].astype(str) + " до " + df[
-                                r'Дата складання ПН/РК'].astype(str) + " від " + df['датаРеализации'].astype(str)])
-                        df = get_validcolumns_name(df)
+                                r'Дата складання ПН/РК'].astype(str) + " від " + today])
+                        df = get_valid_columns_name(df)
                         df = df.astype(str)
-                        try:
-                            df['Статус_ПН/РК'] = df['Статус_ПН/РК'].astype(float).apply(lambda x: round(x, 2))
-                        except Exception as e:
-                            print(str(e))
                         df['Обсяг_операцій'] = df['Обсяг_операцій'].astype(float).apply(lambda x: round(x, 2))
                         df['Сумв_ПДВ'] = df['Сумв_ПДВ'].astype(float).apply(lambda x: round(x, 2))
                         df['номерРеализации'] = df['номерРеализации'].apply(int)
@@ -236,44 +216,42 @@ def add_other_parameters_to_df(excel_file_source):
         return df
 
 
-# pdf set with date in file name
-def get_pdf_set_with_date_in_file_name(directory):
-    ext = r'\d{2}.\d{2}.\d{4}.pdf$'
-    data = {}
-    doc_type_list = []
-    date_list = []
-    file_list = []
-    doc_number_list = []
+def counterparty_payment(directory):
+    date_pattern = r"\d{1,2}[.,-_ ]\d{1,2}[.,-_ ]\d{2,4}"
+    ext = f'{date_pattern}.(pdf|PDF)$'
     for filename in os.listdir(directory):
+        filename = filename.upper()
         try:
-            if re.search(ext, filename):
-                file_list.append(os.path.join(directory, filename))
-                doc_type_list.append(re.search('[а-яА-ЯёЁa-zA-Z]+', filename)[0])
-                date_raw = re.search("\d{1,22}[.,]\d{1,2}[.,]\d{2,4}", filename)
-                if date_raw:
-                    date = date_raw[0].replace(",", ".")
-                    date_list.append(date)
-                else:
-                    continue
-
-                doc_number = re.search(" \d+ ", filename)
-                if doc_number:
-                    doc_number_list.append(int(re.search(" \d+ ", filename)[0]))
-                else:
-                    doc_number_list.append(None)
-
-                data.update(
-                    {"doc_type": doc_type_list, "датаРеализации": date_list, "номерРеализации": doc_number_list,
-                     "filename": file_list})
+            if re.search(r"^(БВ|БB)" + " " + ext, filename):
+                print(filename)
 
         except Exception as e:
             print(str(e))
 
-    df = pd.DataFrame(data)
-    if len(df) > 0:
-        df['датаРеализации'] = df['датаРеализации'].apply(pd.to_datetime, format='%d.%m.%Y')
 
-    return df
+# pdf set with date in file name
+def get_pdf_set_with_date_in_file_name(directory):
+    date_pattern = r"\d{1,2}[.,-_ ]\d{1,2}[.,-_ ]\d{2,4}"
+    doc_type_filter = ['БВ', 'БB', 'РН', 'PH', 'ВН', 'BH', 'TTH', 'ТТН']
+    doc_type_ptrn = r"(^[а-яА-ЯёЁa-zA-Z]{2,3})"
+    df_all = pd.DataFrame({'filename': os.listdir(directory)})
+    df_all['filename'] = df_all['filename'].str.upper().reset_index(drop=True)
+    df_pdf = df_all[df_all['filename'].str.contains('.PDF')].reset_index(drop=True)
+    df = df_pdf[df_pdf['filename'].str.contains('|'.join(doc_type_filter))].reset_index(drop=True)
+    df['name'] = df['filename'].str.replace(r'.PDF', '').str.strip().reset_index(drop=True)
+    df['датаРеализации'] = df['name'].str.extract(f"({date_pattern})$", expand=False).str.strip().reset_index(drop=True)
+    df['датаРеализации'] = pd.to_datetime(df['датаРеализации'], dayfirst=True)
+    # df['датаРеализации'] = df['датаРеализации'].dt.strftime("%d.%m.%Y")
+    df['doc_type'] = df['name'].str.extract(doc_type_ptrn, expand=False).str.strip().reset_index(drop=True)
+    df['номерРеализации'] = df[df['doc_type'] != 'БВ']['name'].str.extract(r"(\d+)", expand=False).str.strip()
+    # df.fillna(0, inplace=True)
+    df['номерРеализации'] = df['номерРеализации'].astype(pd.Int64Dtype())  # .astype('int64')
+    counterparty_date_payment = df[df['doc_type'].str.contains('|'.join(['БВ', 'БB']))][
+        'датаРеализации'].sort_values().tolist()
+    df_doc = df[df['doc_type'].str.contains('|'.join(['РН', 'PH', 'ВН', 'BH', 'TTH', 'ТТН']))][
+        ['doc_type', 'датаРеализации', 'номерРеализации', 'filename']]
+
+    return df_doc, counterparty_date_payment
 
 
 def convert_date_to_str_df(df, column_name):
@@ -284,16 +262,91 @@ def convert_date_to_str_df(df, column_name):
     return df
 
 
+# source_from_excel_df = df with data Vika + add other columns
+# pdf_df - pdf file names (ВН, ТТН)
+def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir, date_of_payments):
+    # df = pd.read_excel(excel_file_source, sheet_name='df')
+    source_from_excel_df = source_from_excel_df.astype(str)
+    template = r"\\PRESTIGEPRODUCT\Scan\Maket.docx"
+
+    for i, row in source_from_excel_df.iterrows():
+        try:
+            doc_number = row['номерРеализации']
+            if len(pdf_df) > 0:
+                number_invoice = get_doctype_by_invoice_number(pdf_df, doc_number, 'ВН')
+                if number_invoice == '':
+                    number_invoice = get_doctype_by_invoice_number(pdf_df, doc_number, 'BH')
+                number_transport = get_doctype_by_invoice_number(pdf_df, doc_number, 'ТТН')
+                if number_transport == '':
+                    number_transport = get_doctype_by_invoice_number(pdf_df, doc_number, 'TTH')
+            else:
+                number_invoice = ''
+                number_transport = ''
+
+            if number_invoice != '':
+                doc_sale_header = number_invoice
+                number_invoice = f"Видаткова накладна № {number_invoice} від {row['датаРеализации']} р."
+            else:
+                if number_transport != '':
+                    doc_sale_header = number_transport
+                else:
+                    doc_sale_header = ''
+
+            if number_transport != '':
+                number_transport = f"Товаро транспортна накладна № {number_transport} від {row['датаРеализации']} р."
+
+            if number_invoice == '' and number_transport == '':
+                continue
+
+            record_number = str(row['Лист_пояснення'])
+            document = MailMerge(template)
+            document.merge(
+                counterparty_code=row['Податковий_номер_Покупця'],
+                total_sale=row['Обсяг_операцій'].replace(".", ","),
+                contracte_number=row['договорНомер'],
+                contracte_date=row['договорДата'],
+                doc_sale_month=row['месяц'],
+                doc_sale_year=row['год'],
+                doc_sale_header=doc_sale_header,
+                doc_sale_number=doc_sale_header,
+                number_invoice=number_invoice,
+                doc_sale_date=row['датаРеализации'],
+                contracte_count_days=row['договорДней'],
+                counterpary=row['контрагент1С'],
+                docTTN=number_transport,
+                row=record_number,
+                report_date='{:%d.%m.%Y}'.format(datetime.today()),
+                doctax_date=row['Дата_складання_ПН/РК'],
+                doctax_number=row['Порядковий_№_ПН/РК'],
+                doctax_amount=row['Обсяг_операцій'].replace(".", ","),
+                doctax_sumtax=row['Сумв_ПДВ'].replace(".", ","),
+                reg_number=row['Реєстраційний_номер'],
+                payments=date_of_payments
+            )
+
+            save_to_dir = (os.path.join(excel_dir, sanitize_filepath(row['контрагент1С'])))
+            if not os.path.isdir(save_to_dir):
+                os.mkdir(save_to_dir)
+            word_file = os.path.join(save_to_dir, fr"{row['pdf_filename']}.docx")
+            pdf_file = os.path.join(save_to_dir, fr"{row['pdf_filename']}.pdf")
+
+            document.write(word_file)  # saving file
+            word_2_pdf(word_file, pdf_file)
+            print('Создан файл', word_file)
+            print('Создан файл', pdf_file)
+            # os.remove(word_file)
+
+        except Exception as e:
+            print(str(e))
+
+
 # create sheet "df" in current file_excel
 # if there are pdf files on current folder added doc_type in Excel
-def edit_excel_and_return_df(excel_file):
+def edit_excel_and_return_df(excel_file, pdf_files_df):
     df_merge = pd.DataFrame()
-    pdf_files_df = pd.DataFrame()
+    excel_file = create_new_excel(excel_file)
     try:
-        dir_name = os.path.dirname(excel_file)
         df = add_other_parameters_to_df(excel_file)
-        pdf_files_df = get_pdf_set_with_date_in_file_name(
-            dir_name)  # dataframe with pdf filenames from folder with excel_file_source
         if len(pdf_files_df) > 0:  # the sheet "df" need create also if isn't files of pdf
             type_of_docs_df = pdf_files_df.groupby(['датаРеализации', 'номерРеализации'],
                                                    as_index=False)['doc_type'].agg(list)
@@ -303,29 +356,57 @@ def edit_excel_and_return_df(excel_file):
             df_merge = df
             df_merge['doc_type'] = None
 
-        df_merge = df_merge.sort_values("датаРеализации")
+        # df_merge = df_merge.sort_values("Дата_складання_ПН/РК").reset_index(drop=True)
         df_merge = convert_date_to_str_df(df_merge, 'датаРеализации')
         df_merge = convert_date_to_str_df(df_merge, 'Дата_складання_ПН/РК')
         df_merge = convert_date_to_str_df(df_merge, 'Дата_реєстрації_ПН/РК_в_ЄРПН')
         df_merge = convert_date_to_str_df(df_merge, 'договорДата')
-        df_merge.rename(columns={'doc_type': 'doc_type_list'})
+        # df_merge.rename(columns={'doc_type': 'doc_type_list'})
         df_merge.fillna('')
-        # df.to_excel('output.xlsx', engine='openpyxl')  # For .xlsx files
-        # df.to_excel('output.xls', engine='xlwt')  # For .xls files
-
-        with pd.ExcelWriter(excel_file, mode='a', if_sheet_exists='replace') as writer:
+        save_as = Path(Path(excel_file).parent, Path(excel_file).stem + '_new' + Path(excel_file).suffix)
+        # with pd.ExcelWriter(save_as, mode='a', if_sheet_exists='new') as writer:
+        #     df_merge.to_excel(writer, sheet_name='df', index=False)
+        with pd.ExcelWriter(save_as) as writer:
             df_merge.to_excel(writer, sheet_name='df', index=False)
 
     except Exception as e:
         err_info = "Error: MergeExcleWord: %s" % e
-        print(err_info)
+        if e.args[0] == 13:
+            print("Закройте файл {}".format(excel_file))
+            sys.exit(0)
+        else:
+            print(err_info)
 
     finally:
-        return df_merge, pdf_files_df
+        return df_merge.astype(str)
+
+
+def get_bank_statement(date_of_payments):
+    result = ''
+    size = len(date_of_payments)
+    for i, date in enumerate(date_of_payments):
+        if i != (size - 1):
+            result += f"{i + 4}. Банківська виписка від {'{:%d.%m.%Y}'.format(date)}р.\n"
+        else:
+            result += f"{i + 4}. Банківська виписка від {'{:%d.%m.%Y}'.format(date)}р."
+    else:
+        print("Выписки банка в формате pdf в текущем каталоге не обнаружены")
+    return result
+
+
+def merge_excle_word_main(excel_file):
+    if not os.path.exists(excel_file):
+        print("Не найден Excel файл", excel_file)
+        sys.exit(0)
+        
+    excel_dir = Path(os.path.dirname(excel_file))
+    pdf_files_df, date_of_payment = get_pdf_set_with_date_in_file_name(excel_dir)
+    date_of_payments = get_bank_statement(date_of_payment)
+    df_merge = edit_excel_and_return_df(excel_file, pdf_files_df)
+    pdf_files_df = pdf_files_df.astype(str)
+    merge_excel_and_word(df_merge, pdf_files_df, excel_dir, date_of_payments)
 
 
 if __name__ == '__main__':
-    excel_file_source = r"\\PrestigeProduct\Scan\ДЕЛІКАТ - Copy\ТОВ ДЕЛІКАТ РИТЕЙЛ\ДЕЛІКАТ РИТЕЙЛ.xlsx"
-    df_merge, pdf_files_df = edit_excel_and_return_df(excel_file_source)
-    print(df_merge)
-    print(pdf_files_df)
+    excel_file_source = r"c:\Users\Rasim\Desktop\Scan\Маркет позитив плюс\Маркет позитив плюс.xls"
+    merge_excle_word_main(excel_file_source)

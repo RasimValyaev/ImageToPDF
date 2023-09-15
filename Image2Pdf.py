@@ -7,15 +7,15 @@ import os
 from PIL import Image
 
 
-def cycle_on_directory_files_and_image_2_pdf(image_path_source):
+def cycle_on_directory_files_and_image_2_pdf(image_path):
     # цикл по папкам и файлам в папке pathName
-    for root, dirs, files in os.walk(image_path_source):
+    for root, dirs, files in os.walk(image_path):
         try:
             for i, name in enumerate(files):
                 filename, file_extension = os.path.splitext(name.lower())
                 if file_extension in ['.jpg', '.jpeg', '.png', '.bmp', 'png'] and filename[:2] in ['рн', 'вн', 'тт']:
                     print(name)
-                    image_2_pdf(image_path_source, image_path_source + r'\\' + name)
+                    image_2_pdf(image_path, image_path + r'\\' + name)
 
         except Exception as e:
             print(str(e))

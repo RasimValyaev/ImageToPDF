@@ -1,0 +1,14 @@
+*.log
+*.pyd
+*.xml
+*.iml
+*.png
+*.jpg
+*.xls*
+*.spec
+/.idea
+/output
+/venv
+/poppler-23.08.0
+/docx-template
+__init__.*

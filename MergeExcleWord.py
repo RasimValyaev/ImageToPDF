@@ -231,19 +231,9 @@ def counterparty_payment(directory):
 
 # pdf set with date in file name
 def get_pdf_set_with_date_in_file_name(directory):
-    df = pd.DataFrame()
     date_pattern = r"\d{1,2}[.,-_ ]\d{1,2}[.,-_ ]\d{2,4}"
-    ext = f'{date_pattern}.(pdf|PDF)$'
-    data = {}
     doc_type_filter = ['БВ', 'БB', 'РН', 'PH', 'ВН', 'BH', 'TTH', 'ТТН']
     doc_type_ptrn = r"(^[а-яА-ЯёЁa-zA-Z]{2,3})"
-    doc_type_list = []
-    date_list = []
-    file_list = []
-    doc_number_list = []
-    bank_row = 4
-    counterparty_payment = {}
-
     df_all = pd.DataFrame({'filename': os.listdir(directory)})
     df_all['filename'] = df_all['filename'].str.upper().reset_index(drop=True)
     df_pdf = df_all[df_all['filename'].str.contains('.PDF')].reset_index(drop=True)
@@ -251,49 +241,17 @@ def get_pdf_set_with_date_in_file_name(directory):
     df['name'] = df['filename'].str.replace(r'.PDF', '').str.strip().reset_index(drop=True)
     df['датаРеализации'] = df['name'].str.extract(f"({date_pattern})$", expand=False).str.strip().reset_index(drop=True)
     df['датаРеализации'] = pd.to_datetime(df['датаРеализации'], dayfirst=True)
+    # df['датаРеализации'] = df['датаРеализации'].dt.strftime("%d.%m.%Y")
     df['doc_type'] = df['name'].str.extract(doc_type_ptrn, expand=False).str.strip().reset_index(drop=True)
     df['номерРеализации'] = df[df['doc_type'] != 'БВ']['name'].str.extract(r"(\d+)", expand=False).str.strip()
-    df.date = df.date.dt.strftime("%d.%m.%Y")
+    # df.fillna(0, inplace=True)
+    df['номерРеализации'] = df['номерРеализации'].astype(pd.Int64Dtype()) #.astype('int64')
+    counterparty_date_payment = df[df['doc_type'].str.contains('|'.join(['БВ', 'БB']))][
+        'датаРеализации'].sort_values().tolist()
+    df_doc = df[df['doc_type'].str.contains('|'.join(['РН', 'PH', 'ВН', 'BH', 'TTH', 'ТТН']))][
+        ['doc_type', 'датаРеализации', 'номерРеализации', 'filename']]
 
-    for filename in os.listdir(directory):
-        filename = filename.upper()
-        try:
-            if re.search(r"^(БВ|БB|РН|PH|ВН|BH|TTH|ТТН)" + ".*" + ext, filename):
-                date_raw = re.search(ext, filename)
-                if date_raw:
-                    date_str = parse(date_raw[0].replace(".PDF", ""),
-                                     dayfirst=True).date().strftime("%d.%m.%Y")
-                else:
-                    continue
-                df_filtered = df[df['filename'].str.contains('БВ')]
-                if re.search(r"^(БВ|БB)", filename):
-                    bank = {f"bank_row{bank_row}": date_str}
-                    counterparty_payment.update(bank)
-                    continue
-
-                date_list.append(date_str)
-                file_list.append(os.path.join(directory, filename))
-                doc_type_list.append(re.search('[а-яА-ЯёЁa-zA-Z]+', filename)[0])
-
-                doc_number = re.search("\d+ ", filename)
-                if doc_number:
-                    doc_number_list.append(int(re.search(" \d+ ", filename)[0]))
-                else:
-                    doc_number_list.append(None)
-
-                data.update(
-                    {"doc_type": doc_type_list, "датаРеализации": date_list, "номерРеализации": doc_number_list,
-                     "filename": file_list})
-
-        except Exception as e:
-            print(str(e))
-
-    df1 = pd.DataFrame(data)
-    if len(df1) > 0:
-        df1['датаРеализации'] = df1['датаРеализации'].apply(pd.to_datetime, format='%d.%m.%Y')
-        rowlist = ['ВН', 'ТТН', 'BH', 'TTH']
-        df1 = df1[df1['doc_type'].isin(rowlist)]
-    return df1
+    return df_doc, counterparty_date_payment
 
 
 def convert_date_to_str_df(df, column_name):
@@ -390,7 +348,7 @@ def edit_excel_and_return_df(excel_file):
     try:
         dir_name = os.path.dirname(excel_file)
         df = add_other_parameters_to_df(excel_file)
-        pdf_files_df = get_pdf_set_with_date_in_file_name(
+        pdf_files_df, paying_to_bank = get_pdf_set_with_date_in_file_name(
             dir_name)  # dataframe with pdf filenames from folder with excel_file_source
         if len(pdf_files_df) > 0:  # the sheet "df" need create also if isn't files of pdf
             type_of_docs_df = pdf_files_df.groupby(['датаРеализации', 'номерРеализации'],
@@ -427,6 +385,8 @@ def edit_excel_and_return_df(excel_file):
 
 
 def merge_excle_word_main(excel_file):
+    if not os.path.exists(excel_file):
+        print("Не найден Excel файл", excel_file)
     excel_dir = Path(os.path.dirname(excel_file))
     df_merge, pdf_files_df = edit_excel_and_return_df(excel_file)
     merge_excel_and_word(df_merge, pdf_files_df, excel_dir)

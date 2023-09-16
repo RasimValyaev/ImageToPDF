@@ -200,10 +200,9 @@ def create_new_excel(excel_file):
     return excel_file
 
 
-def add_other_parameters_to_df(excel_file):
-    df = pd.DataFrame()
+def add_other_parameters_to_df(df):
+    # df = pd.DataFrame()
     try:
-        df = counterparty_name_add_to_df(excel_file)
         if len(df) > 0:
             df = doc_tax_details_add_to_df(df)
             if len(df) > 0:
@@ -365,8 +364,9 @@ def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir, date_of_paymen
 def edit_excel_and_return_df(excel_file, pdf_files_df):
     df_merge = pd.DataFrame()
     excel_file = create_new_excel(excel_file)
+    df = counterparty_name_add_to_df(excel_file)
     try:
-        df = add_other_parameters_to_df(excel_file)
+        df = add_other_parameters_to_df(df)
         if len(pdf_files_df) > 0:  # the sheet "df" need create also if isn't files of pdf
             type_of_docs_df = pdf_files_df.groupby(['датаРеализации', 'номерРеализации'],
                                                    as_index=False)['doc_type'].agg(list)

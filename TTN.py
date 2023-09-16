@@ -5,6 +5,8 @@
 # find numer TTN by invoice_key
 import os
 import sys
+from dateutil.parser import parse
+import pandas as pd
 import requests
 import json
 
@@ -17,12 +19,8 @@ sys.path.append(os.path.abspath(CONFIG_PATH))
 from configPrestige import DATA_AUTH
 
 
-def get_ttn_details(invoice_key):
+def get_response(url):
     result = ''
-    url = ("http://192.168.1.254/utp_prestige/odata/standard.odata/Document_скТоварноТранспортнаяНакладная?"
-           "$format=json&$top=10&$inlinecount=allpages&$select=Date,Number"
-           f"&$filter=Товары/ДокументОтгрузки eq cast(guid'{invoice_key}',"
-           "'Document_РеализацияТоваровУслуг')&$orderby=Date desc")
     try:
         response = requests.get(url, auth=DATA_AUTH)
         if response.status_code == 200:
@@ -33,6 +31,35 @@ def get_ttn_details(invoice_key):
     finally:
         return result
 
+
+def get_ttn_details(invoice_key):
+    url = ("http://192.168.1.254/utp_prestige/odata/standard.odata/Document_скТоварноТранспортнаяНакладная?"
+           "$format=json&$top=10&$inlinecount=allpages&$select=Date,Number"
+           f"&$filter=Товары/ДокументОтгрузки eq cast(guid'{invoice_key}',"
+           "'Document_РеализацияТоваровУслуг')&$orderby=Date desc")
+
+    return get_response(url)
+
+
+def get_counterparty_details(date_ttn, number_ttn):
+    pass
+
+
+def get_counterparty_uuid(date_ttn, number_ttn):
+    day = parse(date_ttn).day
+    month = parse(date_ttn).month
+    year = parse(date_ttn).year
+
+    url = ("http://192.168.1.254/utp_prestige/odata/standard.odata/Document_скТоварноТранспортнаяНакладная?$format=json"
+           f"&$filter=substringof('{number_ttn}', Number) and year(Date) eq {year}"
+           f" and month(Date) eq {month} and day(Date) eq {day}")
+    return get_response(url)
+
+
+def add_counterparty_to_ttn_df(df: pd.DataFrame()):
+    for i, row in df.iterrows():
+        number_ttn = row['1СномерТТН']
+        date_ttn = row['1СдатаТТН']
 
 
 if __name__ == '__main__':

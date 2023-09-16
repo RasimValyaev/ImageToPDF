@@ -24,7 +24,7 @@ from pathvalidate import sanitize_filepath
 from datetime import datetime
 from mailmerge import MailMerge
 from DetailsForTaxDocument import get_counterparty, get_list_of_tax_fatura, get_contract_details, get_doc_sale_details
-from TTN import get_ttn_details
+from TTN import get_ttn_details, add_ttn_details_to_df
 from Word2Pdf import word_2_pdf
 from ConvertXlsToXlsx import convert_xls_to_xlsx
 
@@ -132,20 +132,22 @@ def doc_contract_details_add_to_df(df):
 
     return df
 
-
-def ttn_add_to_df(df):
-
-    df['1СномерТТН'] = None
-    df['1СдатаТТН'] = None
+# add info by ttn. source - Excel file (not from file names)
+def ttn_from_1c_add_to_df(df):
+    df['ТТН_1Сномер'] = None
+    df['ТТН_1Сдата'] = None
+    df['ТТН_uuid'] = None
     for i, row in df.iterrows():
         doc_sale_uuid = row['invoice_key']
         ttn_details = get_ttn_details(doc_sale_uuid)
         if len(ttn_details) == 0:
             continue
+        ttn_uuid = ttn_details['Ref_Key']
         ttn_date = parse(ttn_details['Date']).strftime("%d.%m.%Y")
         ttn_number = int(ttn_details['Number'])
-        df.loc[df['invoice_key'] == row['invoice_key'], '1СномерТТН'] = ttn_number
-        df.loc[df['invoice_key'] == row['invoice_key'], '1СдатаТТН'] = ttn_date
+        df.loc[df['invoice_key'] == row['invoice_key'], 'ТТН_uuid'] = ttn_uuid
+        df.loc[df['invoice_key'] == row['invoice_key'], 'ТТН_1Сномер'] = ttn_number
+        df.loc[df['invoice_key'] == row['invoice_key'], 'ТТН_1Сдата'] = ttn_date
 
     return df
 
@@ -224,8 +226,8 @@ def add_other_parameters_to_df(df):
                         df['номерРеализации'] = df['номерРеализации'].apply(int)
                         df['датаРеализации'] = df['датаРеализации'].apply(pd.to_datetime, format='%d.%m.%Y')
 
-        df = ttn_add_to_df(df)
-        df['НомерТТН_и_ВН_1С'] = np.where(df['номерРеализации'] == df['1СномерТТН'], '', ['Не совпадает'])
+        df = ttn_from_1c_add_to_df(df)
+        df['НомерТТН_и_ВН_1С'] = np.where(df['номерРеализации'] == df['ТТН_1Сномер'], '', ['Не совпадает'])
 
     except Exception as e:
         print(str(e))
@@ -259,17 +261,17 @@ def get_pdf_set_with_date_in_file_name(directory):
     df['name'] = df['filename'].str.replace(r'.PDF', '').str.strip().reset_index(drop=True)
     df['датаРеализации'] = df['name'].str.extract(f"({date_pattern})$", expand=False).str.strip().reset_index(drop=True)
     df['датаРеализации'] = pd.to_datetime(df['датаРеализации'], dayfirst=True)
-    # df['датаРеализации'] = df['датаРеализации'].dt.strftime("%d.%m.%Y")
     df['doc_type'] = df['name'].str.extract(doc_type_ptrn, expand=False).str.strip().reset_index(drop=True)
     df['номерРеализации'] = df[df['doc_type'] != 'БВ']['name'].str.extract(r"(\d+)", expand=False).str.strip()
     # df.fillna(0, inplace=True)
     df['номерРеализации'] = df['номерРеализации'].astype(pd.Int64Dtype())  # .astype('int64')
     counterparty_date_payment = df[df['doc_type'].str.contains('|'.join(['БВ', 'БB']))][
         'датаРеализации'].sort_values().tolist()
-    df_doc = df[df['doc_type'].str.contains('|'.join(['РН', 'PH', 'ВН', 'BH', 'TTH', 'ТТН']))][
+    df_vn_ttn = df[df['doc_type'].str.contains('|'.join(['РН', 'PH', 'ВН', 'BH', 'TTH', 'ТТН']))][
         ['doc_type', 'датаРеализации', 'номерРеализации', 'filename']]
+    df_vn_ttn = add_ttn_details_to_df(df_vn_ttn)
 
-    return df_doc, counterparty_date_payment
+    return df_vn_ttn, counterparty_date_payment
 
 
 def convert_date_to_str_df(df, column_name):

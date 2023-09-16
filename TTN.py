@@ -34,33 +34,70 @@ def get_response(url):
 
 def get_ttn_details(invoice_key):
     url = ("http://192.168.1.254/utp_prestige/odata/standard.odata/Document_скТоварноТранспортнаяНакладная?"
-           "$format=json&$top=10&$inlinecount=allpages&$select=Date,Number"
-           f"&$filter=Товары/ДокументОтгрузки eq cast(guid'{invoice_key}',"
-           "'Document_РеализацияТоваровУслуг')&$orderby=Date desc")
+           "$format=json"
+           f"&$filter=Товары/ДокументОтгрузки eq cast(guid'{invoice_key}','Document_РеализацияТоваровУслуг')"
+           "&$select=Ref_Key,Date,Number")
 
     return get_response(url)
 
 
-def get_counterparty_details(date_ttn, number_ttn):
-    pass
+def get_counterparty_name(counterparty_key):
+    url = ("http://192.168.1.254/utp_prestige/odata/standard.odata/Catalog_Контрагенты?$format=json"
+           f"&$filter=Ref_Key eq guid'{counterparty_key}'&$select=Description")
+    return get_response(url)
 
 
-def get_counterparty_uuid(date_ttn, number_ttn):
+def add_ttn_details_to_df(df: pd.DataFrame()):
+    df['doc_file_uuid'] = None
+    for i, row in df.iterrows():
+        date_ttn = row['датаРеализации']
+        number_ttn = row['номерРеализации']
+        doc_type = row['doc_type']
+        if doc_type == 'ВН':
+            doc_details = get_doc_sales_details(date_ttn, number_ttn)
+        elif doc_type == 'ТТН':
+            doc_details = get_doc_transport_details(date_ttn, number_ttn)
+
+        if len(doc_details) == 0:
+            print(f"НЕ нашел в 1С документ: {row['filename']}. Перепроверьте наименование скана")
+        else:
+            doc_ttn_uuid = doc_details['Ref_Key']
+            df.loc['doc_file_uuid'] = doc_ttn_uuid
+
+    return df
+
+
+def get_doc_transport_details(date_ttn, number_ttn):
     day = parse(date_ttn).day
     month = parse(date_ttn).month
     year = parse(date_ttn).year
 
     url = ("http://192.168.1.254/utp_prestige/odata/standard.odata/Document_скТоварноТранспортнаяНакладная?$format=json"
            f"&$filter=substringof('{number_ttn}', Number) and year(Date) eq {year}"
-           f" and month(Date) eq {month} and day(Date) eq {day}")
+           f" and month(Date) eq {month} and day(Date) eq {day}&$select=Ref_Key,Контрагент,Date,Number")
     return get_response(url)
 
 
-def add_counterparty_to_ttn_df(df: pd.DataFrame()):
-    for i, row in df.iterrows():
-        number_ttn = row['1СномерТТН']
-        date_ttn = row['1СдатаТТН']
+def get_doc_sales_details(date_ttn, number_ttn):
+    date_ttn = str(date_ttn)
+    day = parse(date_ttn).day
+    month = parse(date_ttn).month
+    year = parse(date_ttn).year
+
+    url = ("http://192.168.1.254/utp_prestige/odata/standard.odata/Document_РеализацияТоваровУслуг?$format=json"
+           f"&$filter=substringof('{number_ttn}', Number) and year(Date) eq {year}"
+           f" and month(Date) eq {month} and day(Date) eq {day}&$select=Ref_Key,Контрагент,Date,Number")
+    return get_response(url)
+
+
+def add_to_data_dict(add_to: dict, dict_source: dict) -> dict:
+    return add_to.update(dict_source)
 
 
 if __name__ == '__main__':
-    get_ttn_details('8b108495-507d-11ee-8195-001dd8b72b55')
+    # get_ttn_details('8b108495-507d-11ee-8195-001dd8b72b55')
+    doc_transport_details = get_doc_transport_details("05.05.2023", "13606")
+    doc_ttn_uuid = doc_transport_details['Ref_Key']
+    counterparty_uuid = doc_transport_details['Контрагент']
+    counterparty_name = get_counterparty_name(counterparty_uuid)['Description']
+    print(counterparty_uuid, counterparty_name)

@@ -74,4 +74,5 @@ def get_list_of_tax_fatura(date_sale, client_uuid):
 
 if __name__ == '__main__':
     tax_code = '425477026551'
-    get_counterparty_by_texcode(tax_code)
+    counterparty = get_counterparty_by_texcode(tax_code)
+    print(counterparty)

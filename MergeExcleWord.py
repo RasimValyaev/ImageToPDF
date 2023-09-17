@@ -149,7 +149,11 @@ def ttn_from_1c_add_to_df(df):
             continue
         ttn_uuid = ttn_details['Ref_Key']
         ttn_date = parse(ttn_details['Date']).strftime("%d.%m.%Y")
-        ttn_number = int(ttn_details['Number'])
+        number_txt = re.search("\d+", ttn_details['Number'])
+        if number_txt != '':
+            ttn_number = int(number_txt[0])
+        else:
+            ttn_number = 0
         df.loc[df['invoice_key'] == row['invoice_key'], 'ТТН_uuid'] = ttn_uuid
         df.loc[df['invoice_key'] == row['invoice_key'], 'ТТН_1Сномер'] = ttn_number
         df.loc[df['invoice_key'] == row['invoice_key'], 'ТТН_1Сдата'] = ttn_date
@@ -177,15 +181,6 @@ def doc_sale_details_add_to_df(df):
     # df = df.sort_values("Дата складання ПН/РК").reset_index(drop=True)
 
     return df
-
-
-# def get_doctype_by_invoice_number(pdf_file_names: pd.DataFrame(), look_number: str, doc_type: str):
-#     doc_sale = pdf_file_names[(pdf_file_names['doc_type'] == doc_type)
-#                               & (pdf_file_names['номерРеализации'] == look_number)]
-#     if len(doc_sale) > 0:
-#         return look_number
-#     else:
-#         return ''
 
 
 def get_valid_columns_name(df):
@@ -230,7 +225,9 @@ def add_other_parameters_to_df(df):
                         df['Обсяг_операцій'] = df['Обсяг_операцій'].astype(float).apply(lambda x: round(x, 2))
                         df['Сумв_ПДВ'] = df['Сумв_ПДВ'].astype(float).apply(lambda x: round(x, 2))
                         df['номерРеализации'] = df['номерРеализации'].apply(int)
-                        df['датаРеализации'] = df['датаРеализации'].apply(pd.to_datetime, format='%d.%m.%Y')
+                        # df['датаРеализации'] = df['датаРеализации'].apply(pd.to_datetime, format='%d.%m.%Y')
+                        df['датаРеализации'] = pd.to_datetime(df['датаРеализации'], dayfirst=True).dt.strftime(
+                            '%d.%m.%Y')
 
         df = ttn_from_1c_add_to_df(df)
         df['НомерТТН_и_ВН_1С'] = np.where(df['номерРеализации'] == df['ТТН_1Сномер'], '', ['Не совпадает'])
@@ -285,12 +282,8 @@ def get_pdf_set_with_date_in_file_name(excel_path, counterparty_uuid: list):
 
 
 def convert_date_to_str_df(df, column_name):
+    df[column_name] = df[column_name].astype(str)
     df[column_name] = pd.to_datetime(df[column_name], dayfirst=True).dt.strftime('%d.%m.%Y')
-    # if df[column_name].dtype == '<M8[ns]':
-    #     df[column_name] = df[column_name].dt.strftime('%d.%m.%Y')
-    # else:
-    #     df[column_name] = pd.to_datetime(df[column_name], format='%d.%m.%Y').dt.strftime('%d.%m.%Y')
-    # df[column_name] = pd.to_datetime(df[column_name], dayfirst=True)
     return df
 
 
@@ -425,14 +418,18 @@ def excel_to_df(excel_file):
 def get_bank_statement(date_of_payments):
     result = ''
     size = len(date_of_payments)
-    for i, date in enumerate(date_of_payments):
-        if i != (size - 1):
-            result += f"{i + 4}. Банківська виписка від {'{:%d.%m.%Y}'.format(date)}р.\n"
-        else:
-            result += f"{i + 4}. Банківська виписка від {'{:%d.%m.%Y}'.format(date)}р."
+    if size == 0:
+        print("\n*****************************************************************"
+              "\nВыписки банка в формате pdf в текущем каталоге не обнаружены."
+              "\nСледовательно, в док 'Лист пояснення' инф о платежах будет отсутствовать"
+              "\n*****************************************************************\n"
+              )
     else:
-        print("\nВыписки банка в формате pdf в текущем каталоге не обнаружены."
-              "\nСледовательно, в док 'Лист пояснення' инф о платежах будет отсутствовать")
+        for i, date in enumerate(date_of_payments):
+            if i != (size - 1):
+                result += f"{i + 4}. Банківська виписка від {'{:%d.%m.%Y}'.format(date)}р.\n"
+            else:
+                result += f"{i + 4}. Банківська виписка від {'{:%d.%m.%Y}'.format(date)}р."
     return result
 
 
@@ -461,5 +458,5 @@ def merge_excle_word_main(excel_file):
 
 
 if __name__ == '__main__':
-    excel_file_source = r"c:\Users\Rasim\Desktop\Scan\Маркет позитив плюс\Маркет позитив плюс.xlsx"
+    excel_file_source = r"\\PRESTIGEPRODUCT\Scan\Левайс\Левайс.xls"
     merge_excle_word_main(excel_file_source)

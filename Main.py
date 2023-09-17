@@ -13,7 +13,7 @@ from pathlib import Path
 from Image2PdfMultiPages import add_image_to_pdf
 from pathvalidate import sanitize_filepath
 from PdfExtractImage import extract_image
-from MergeExcleWord import edit_excel_and_return_df, convert_date_to_str_df
+from MergeExcleWord import excel_to_df, convert_date_to_str_df
 from Word2Pdf import word_2_pdf
 
 NUMBER_FIRST = 1
@@ -66,7 +66,7 @@ def merge_word(word_source_df, single_parameters, merge_to_group=True):
 # создаем папки по циклу согласно типу_док и дате, и извлекаем туда изображения из pdf
 def merge_files_to_one(excel_file):
     try:
-        df_exl, df_pdf = edit_excel_and_return_df(excel_file)
+        df_exl, df_pdf = excel_to_df(excel_file)
         if len(df_exl) == 0 or len(df_pdf) == 0:
             sys.exit(0)
         dir_name = os.path.dirname(excel_file)

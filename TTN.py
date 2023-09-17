@@ -101,7 +101,7 @@ def add_ttn_details_to_df(df: pd.DataFrame(), counterparty_uuid=[]):
         doc_details = get_doc_details_from_1C(date_doc, number_ttn, doc_type, counterparty_uuid)
 
         if len(doc_details) == 0:
-            print(f"В 1С НЕ нашел документ относящийся к данному клиенту: {row['filename']}."
+            print(f"В 1С НЕ нашел документ относящийся к данному клиенту. Файл: {row['filename']}."
                   "\nПерепроверьте дату, номер, тип док, контрагента у скана")
         else:
             doc_uuid = doc_details['Ref_Key']

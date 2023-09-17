@@ -18,15 +18,19 @@ import numpy as np
 import pandas as pd
 import os.path
 import xlrd
+import warnings
 from dateutil.parser import parse
 from pathlib import Path
 from pathvalidate import sanitize_filepath
 from datetime import datetime
 from mailmerge import MailMerge
-from DetailsForTaxDocument import get_counterparty_by_texcode, get_list_of_tax_fatura, get_contract_details, get_doc_sale_details
+from DetailsForTaxDocument import get_counterparty_by_texcode, get_list_of_tax_fatura, get_contract_details, \
+    get_doc_sale_details
 from TTN import get_ttn_details, add_ttn_details_to_df
 from Word2Pdf import word_2_pdf
 from ConvertXlsToXlsx import convert_xls_to_xlsx
+
+warnings.filterwarnings("ignore", category=UserWarning)
 
 # pd.set_option('precision', 2) # not norking
 pd.set_option('float_format', '{:.2f}'.format)
@@ -252,7 +256,7 @@ def counterparty_payment(directory):
 
 
 # pdf set with date in file name
-def get_pdf_set_with_date_in_file_name(excel_path, counterparty_uuid:list):
+def get_pdf_set_with_date_in_file_name(excel_path, counterparty_uuid: list):
     date_pattern = r"\d{1,2}[.,-_ ]\d{1,2}[.,-_ ]\d{2,4}"
     doc_type_filter = ['БВ', 'БB', 'РН', 'PH', 'ВН', 'BH', 'TTH', 'ТТН']
     doc_type_ptrn = r"(^[а-яА-ЯёЁa-zA-Z]{2,3})"
@@ -262,7 +266,11 @@ def get_pdf_set_with_date_in_file_name(excel_path, counterparty_uuid:list):
     df = df_pdf[df_pdf['filename'].str.contains('|'.join(doc_type_filter))].reset_index(drop=True)
     df['name'] = df['filename'].str.replace(r'.PDF', '').str.strip().reset_index(drop=True)
     df['датаРеализации'] = df['name'].str.extract(f"({date_pattern})$", expand=False).str.strip().reset_index(drop=True)
-    df['датаРеализации'] = pd.to_datetime(df['датаРеализации'], dayfirst=True)
+    try:
+        df['датаРеализации'] = pd.to_datetime(df['датаРеализации'], dayfirst=True)
+    except:
+        print("В Наименовании файла есть некорректная дата")
+        sys.exit(0)
     df['doc_type'] = df['name'].str.extract(doc_type_ptrn, expand=False).str.strip().reset_index(drop=True)
     df['номерРеализации'] = df[df['doc_type'] != 'БВ']['name'].str.extract(r"(\d+)", expand=False).str.strip()
     # df.fillna(0, inplace=True)
@@ -277,10 +285,12 @@ def get_pdf_set_with_date_in_file_name(excel_path, counterparty_uuid:list):
 
 
 def convert_date_to_str_df(df, column_name):
-    if df[column_name].dtype == '<M8[ns]':
-        df[column_name] = df[column_name].dt.strftime('%d.%m.%Y')
-    else:
-        df[column_name] = pd.to_datetime(df[column_name], format='%d.%m.%Y').dt.strftime('%d.%m.%Y')
+    df[column_name] = pd.to_datetime(df[column_name], dayfirst=True).dt.strftime('%d.%m.%Y')
+    # if df[column_name].dtype == '<M8[ns]':
+    #     df[column_name] = df[column_name].dt.strftime('%d.%m.%Y')
+    # else:
+    #     df[column_name] = pd.to_datetime(df[column_name], format='%d.%m.%Y').dt.strftime('%d.%m.%Y')
+    # df[column_name] = pd.to_datetime(df[column_name], dayfirst=True)
     return df
 
 
@@ -365,10 +375,20 @@ def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir, date_of_paymen
 
 def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
     if len(pdf_files_df) > 0:  # the sheet "excel_df" need create also if isn't files of pdf
-        type_of_docs_df = pdf_files_df.groupby(['датаРеализации', 'номерРеализации'],
-                                               as_index=False)['doc_type'].agg(list)
-        df_merge = pd.merge(excel_df, type_of_docs_df, how='left', left_on=['датаРеализации', 'номерРеализации'],
-                            right_on=['датаРеализации', 'номерРеализации'])
+        pdf_files_invoice_df = pdf_files_df[pdf_files_df.doc_type == 'ВН'].reset_index(drop=True)
+        pdf_files_invoice_df = pdf_files_invoice_df.rename(columns={'filename': 'файл ВН'})
+        pdf_files_invoice_df = pdf_files_invoice_df[['файл ВН', 'doc_file_uuid']]
+        pdf_files_transport_df = pdf_files_df[pdf_files_df.doc_type == 'ТТН'].reset_index(drop=True)
+        pdf_files_transport_df = pdf_files_transport_df.rename(columns={'filename': 'файл ТТН'})
+        pdf_files_transport_df = pdf_files_transport_df[['файл ТТН', 'doc_file_uuid']]
+        df_merge = pd.merge(excel_df, pdf_files_invoice_df, how='left', left_on=['invoice_key'],
+                            right_on=['doc_file_uuid'])
+        df_merge.drop(['doc_file_uuid'], axis=1, inplace=True)
+        df_merge = pd.merge(df_merge, pdf_files_transport_df, how='left', left_on=['ТТН_uuid'],
+                            right_on=['doc_file_uuid'])
+        df_merge.drop(['doc_file_uuid', 'ТТН_uuid', 'invoice_key', 'contract_key', 'counterparty_key'], axis=1,
+                      inplace=True)
+
     else:
         df_merge = excel_df
         df_merge['doc_type'] = None
@@ -378,19 +398,22 @@ def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
     df_merge = convert_date_to_str_df(df_merge, 'Дата_складання_ПН/РК')
     df_merge = convert_date_to_str_df(df_merge, 'Дата_реєстрації_ПН/РК_в_ЄРПН')
     df_merge = convert_date_to_str_df(df_merge, 'договорДата')
-    # df_merge.rename(columns={'doc_type': 'doc_type_list'})
     df_merge.fillna('')
     save_as = Path(Path(path_excel).parent, Path(path_excel).stem + '_new' + Path(path_excel).suffix)
     # with pd.ExcelWriter(save_as, mode='a', if_sheet_exists='new') as writer:
     #     df_merge.to_excel(writer, sheet_name='excel_df', index=False)
-    with pd.ExcelWriter(save_as) as writer:
-        df_merge.to_excel(writer, sheet_name='excel_df', index=False)
+    try:
+        with pd.ExcelWriter(save_as) as writer:
+            df_merge.to_excel(writer, sheet_name='excel_df', index=False)
+
+    except Exception as e:
+        print(str(e))
 
 
 # create sheet "df" in current file_excel
 # if there are pdf files on current folder added doc_type in Excel
 def excel_to_df(excel_file):
-    excel_file = create_new_excel(excel_file)
+    # excel_file = create_new_excel(excel_file)
     df = counterparty_name_add_to_df(excel_file)
     try:
         df = add_other_parameters_to_df(df)
@@ -421,9 +444,10 @@ def get_bank_statement(date_of_payments):
     return result
 
 
-def get_counterparty_uuid_from_excel_df(df:pd.DataFrame()):
+def get_counterparty_uuid_from_excel_df(df: pd.DataFrame()):
     counterparty_uuid = df.groupby('counterparty_key')
     return counterparty_uuid.counterparty_key.unique().to_list()
+
 
 def merge_excle_word_main(excel_file):
     if not os.path.exists(excel_file):
@@ -440,10 +464,10 @@ def merge_excle_word_main(excel_file):
     pdf_files_df, date_of_payment = get_pdf_set_with_date_in_file_name(excel_dir, counterparty_uuid)
     date_of_payments = get_bank_statement(date_of_payment)
 
-    df_merge = merge_excel_and_pdf_df(excel_df, pdf_files_df)
+    df_merge = merge_excel_and_pdf_df(excel_df, pdf_files_df, excel_file)
     merge_excel_and_word(df_merge, pdf_files_df, excel_dir, date_of_payments)
 
 
 if __name__ == '__main__':
-    excel_file_source = r"c:\Users\Rasim\Desktop\Scan\Маркет позитив плюс\Маркет позитив плюс.xls"
+    excel_file_source = r"c:\Users\Rasim\Desktop\Scan\Маркет позитив плюс\Маркет позитив плюс.xlsx"
     merge_excle_word_main(excel_file_source)

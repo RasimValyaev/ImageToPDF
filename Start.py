@@ -20,9 +20,9 @@ root.geometry("400x100")
 root.grid_rowconfigure(index=0, weight=1)
 root.grid_columnconfigure(index=0, weight=1)
 
-label = tk.Label(root, text="Выбираемый Excel файл должен быть в папке со сканами.\n"
-                            "Наименование файлов должно начинаться на ВН или ТТН.\n"
-                            "В Worde не забудьте обновить список платежей\n"
+label = tk.Label(root, text="Выбираемый Excel файл должен быть в папке со сканам.\n"
+                            "Наименование файлов должно начинаться на ВН или ТТН и иметь расширение pdf.\n"
+                            "Банковские выписки: БВ дата.pdf\n"
                  )
 label.pack()
 
@@ -35,11 +35,11 @@ if not os.path.exists(template):
     result = messagebox.askquestion(msg_header, msg_no_template)
     if result != 'yes':
         sys.exit(0)
-
-result = messagebox.askquestion("Инфо банка", "Если данные о платежах НЕ обновлены, тогда выйти?")
-
-if result == 'yes':
-    sys.exit(0)
+#
+# result = messagebox.askquestion("Инфо банка", "Если данные о платежах НЕ обновлены, тогда выйти?")
+#
+# if result == 'yes':
+#     sys.exit(0)
 
 print("Нашел Шаблон письма")
 button = tk.Button(root, text="Выберите Excel файл", command=select_file)

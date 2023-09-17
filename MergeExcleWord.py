@@ -43,9 +43,11 @@ NUMBER_FIRST = 1  # номер заявления начинается с это
 
 def counterparty_name_add_to_df(path_to_file_excel):
     df = pd.DataFrame()
-    # added to df counterparty name and code
     try:
         df = pd.read_excel(path_to_file_excel, sheet_name=0)
+        if not control_columns_name_in_excel_source(df):
+            df = pd.DataFrame()
+
         np.round(df, decimals=2)
         df['контрагент1С'] = None
         df['counterparty_key'] = None
@@ -252,6 +254,15 @@ def counterparty_payment(directory):
             print(str(e))
 
 
+def fing_incorrect_date(df):
+    for i, row in df.iterrows():
+        try:
+            parse(row['датаРеализации'])
+        except:
+            print("Проверьте на корректность даты в имени файла", row['filename'])
+            continue
+
+
 # pdf set with date in file name
 def get_pdf_set_with_date_in_file_name(excel_path, counterparty_uuid: list):
     date_pattern = r"\d{1,2}[.,-_ ]\d{1,2}[.,-_ ]\d{2,4}"
@@ -267,7 +278,9 @@ def get_pdf_set_with_date_in_file_name(excel_path, counterparty_uuid: list):
         df['датаРеализации'] = pd.to_datetime(df['датаРеализации'], dayfirst=True)
     except:
         print("В Наименовании файла есть некорректная дата")
+        fing_incorrect_date(df)
         sys.exit(0)
+
     df['doc_type'] = df['name'].str.extract(doc_type_ptrn, expand=False).str.strip().reset_index(drop=True)
     df['номерРеализации'] = df[df['doc_type'] != 'БВ']['name'].str.extract(r"(\d+)", expand=False).str.strip()
     # df.fillna(0, inplace=True)
@@ -292,7 +305,7 @@ def convert_date_to_str_df(df, column_name):
 def merge_excel_and_word(excel_df, excel_dir, date_of_payments):
     excel_df = excel_df.astype(str)
     template = r"\\PRESTIGEPRODUCT\Scan\Maket.docx"
-
+    print("Ожидайте завершения обработки")
     for i, row in excel_df.iterrows():
         try:
             number_invoice = row['номерРеализации']
@@ -387,7 +400,7 @@ def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
     try:
         with pd.ExcelWriter(save_as) as writer:
             df_merge.to_excel(writer, sheet_name='excel_df', index=False)
-
+        print("Создан файл", save_as)
     except Exception as e:
         print(str(e))
 
@@ -395,13 +408,24 @@ def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
         return df_merge
 
 
+def control_columns_name_in_excel_source(df):
+    need_columns = ['Реєстраційний номер', 'Дата складання ПН/РК', 'Дата реєстрації ПН/РК в ЄРПН',
+                    'Податковий номер Покупця', 'Обсяг операцій', 'Сумв ПДВ']
+    all_in_df = all(item in df.columns for item in need_columns)
+    if not all_in_df:
+        print("Проверьте, чтобы в Excel содержал все колонки", need_columns)
+
+    return all_in_df
+
+
 # create sheet "df" in current file_excel
 # if there are pdf files on current folder added doc_type in Excel
 def excel_to_df(excel_file):
-    # excel_file = create_new_excel(excel_file)
-    df = counterparty_name_add_to_df(excel_file)
     try:
-        df = add_other_parameters_to_df(df)
+        # excel_file = create_new_excel(excel_file)
+        df = counterparty_name_add_to_df(excel_file)
+        if len(df) != 0:
+            df = add_other_parameters_to_df(df)
 
     except Exception as e:
         err_info = "Error: MergeExcleWord: %s" % e
@@ -448,13 +472,16 @@ def merge_excle_word_main(excel_file):
 
     # add other column to source - excel + adding df with pdf files
     excel_df = excel_to_df(excel_file)
+    if len(excel_df) == 0:
+        sys.exit(0)
     counterparty_uuid = get_counterparty_uuid_from_excel_df(excel_df)
 
     pdf_files_df, date_of_payment = get_pdf_set_with_date_in_file_name(excel_dir, counterparty_uuid)
     date_of_payments = get_bank_statement(date_of_payment)
 
     df_merge = merge_excel_and_pdf_df(excel_df, pdf_files_df, excel_file)
-    merge_excel_and_word(df_merge, excel_dir, date_of_payments)
+    if date_of_payments != '':
+        merge_excel_and_word(df_merge, excel_dir, date_of_payments)
 
 
 if __name__ == '__main__':

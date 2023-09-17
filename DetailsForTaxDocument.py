@@ -14,7 +14,7 @@ sys.path.append(os.path.abspath(CONFIG_PATH))
 from configPrestige import DATA_AUTH
 
 
-def get_counterparty(counterparty_code):
+def get_counterparty_by_texcode(counterparty_code):
     counterparty = []
     url = (r"http://192.168.1.254/utp_prestige/odata/standard.odata/Catalog_Контрагенты?$format=json&$"
            fr"filter=КодПоЕДРПОУ eq '{counterparty_code}'&$select=Ref_Key,Description")
@@ -74,4 +74,4 @@ def get_list_of_tax_fatura(date_sale, client_uuid):
 
 if __name__ == '__main__':
     tax_code = '425477026551'
-    get_counterparty(tax_code)
+    get_counterparty_by_texcode(tax_code)

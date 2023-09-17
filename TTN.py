@@ -26,7 +26,8 @@ def get_response(url):
         if response.status_code == 200:
             result = response.json()['value'][0]
     except:
-        print(f"Возникла ошибка при получении данных из url: {url}")
+        pass
+        # print(f"Возникла ошибка при получении данных из url: {url}")
 
     finally:
         return result
@@ -47,27 +48,71 @@ def get_counterparty_name(counterparty_key):
     return get_response(url)
 
 
-def add_ttn_details_to_df(df: pd.DataFrame()):
+def parse_date(date_doc):
+    date_doc = str(date_doc)
+    day = parse(date_doc).day
+    month = parse(date_doc).month
+    year = parse(date_doc).year
+
+    return day, month, year
+
+
+
+def get_catalog_by_url(doc_type):
+    catalog = ''
+    if doc_type == 'ВН':
+        catalog = 'Document_РеализацияТоваровУслуг'
+    elif doc_type == 'ТТН':
+        catalog = 'Document_скТоварноТранспортнаяНакладная'
+
+    return catalog
+
+
+def get_addition_counterparty_to_url(doc_type, counterparty_uuid):
+    add_to_url = ''
+    if len(counterparty_uuid) < 2:
+        client_uuid = counterparty_uuid[0][0]
+        if doc_type == 'ВН':
+            add_to_url = f" and Контрагент_Key eq guid'{client_uuid}'"
+        if doc_type == 'ТТН' and len(counterparty_uuid) < 2:
+            add_to_url = f" and cast(guid'{client_uuid}','Catalog_Контрагенты') eq Контрагент"
+    return add_to_url
+
+
+def get_doc_details_from_1C(date_doc, number_ttn, doc_type, counterparty_uuid):
+    add_to_filter = ''
+    day, month, year = parse_date(date_doc)
+    catalog = get_catalog_by_url(doc_type)
+    counterparty = get_addition_counterparty_to_url(doc_type, counterparty_uuid)
+    url = (f"http://192.168.1.254/utp_prestige/odata/standard.odata/{catalog}?$format=json"
+           f"&$filter=substringof('{number_ttn}', Number) and year(Date) eq {year}"
+           f" and month(Date) eq {month} and day(Date) eq {day}{counterparty}&$select=Ref_Key")
+
+    response = get_response(url)
+    return response
+
+
+def add_ttn_details_to_df(df: pd.DataFrame(), counterparty_uuid=[]):
     df['doc_file_uuid'] = None
     for i, row in df.iterrows():
-        date_ttn = row['датаРеализации']
+        date_doc = row['датаРеализации']
         number_ttn = row['номерРеализации']
         doc_type = row['doc_type']
-        if doc_type == 'ВН':
-            doc_details = get_doc_sales_details(date_ttn, number_ttn)
-        elif doc_type == 'ТТН':
-            doc_details = get_doc_transport_details(date_ttn, number_ttn)
+        doc_details = get_doc_details_from_1C(date_doc, number_ttn, doc_type, counterparty_uuid)
 
         if len(doc_details) == 0:
-            print(f"НЕ нашел в 1С документ: {row['filename']}. Перепроверьте наименование скана")
+            print(f"В 1С НЕ нашел документ относящийся к данному клиенту. Файл: {row['filename']}."
+                  "\nПерепроверьте дату, номер, тип док, контрагента у скана")
         else:
-            doc_ttn_uuid = doc_details['Ref_Key']
-            df.loc['doc_file_uuid'] = doc_ttn_uuid
+            doc_uuid = doc_details['Ref_Key']
+            # df.loc['doc_file_uuid'] = doc_uuid
+            df.at[i, 'doc_file_uuid'] = doc_uuid
 
     return df
 
 
 def get_doc_transport_details(date_ttn, number_ttn):
+    date_ttn = str(date_ttn)
     day = parse(date_ttn).day
     month = parse(date_ttn).month
     year = parse(date_ttn).year

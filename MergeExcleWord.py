@@ -179,13 +179,13 @@ def doc_sale_details_add_to_df(df):
     return df
 
 
-def get_doctype_by_invoice_number(pdf_file_names: pd.DataFrame(), look_number: str, doc_type: str):
-    doc_sale = pdf_file_names[(pdf_file_names['doc_type'] == doc_type)
-                              & (pdf_file_names['номерРеализации'] == look_number)]
-    if len(doc_sale) > 0:
-        return look_number
-    else:
-        return ''
+# def get_doctype_by_invoice_number(pdf_file_names: pd.DataFrame(), look_number: str, doc_type: str):
+#     doc_sale = pdf_file_names[(pdf_file_names['doc_type'] == doc_type)
+#                               & (pdf_file_names['номерРеализации'] == look_number)]
+#     if len(doc_sale) > 0:
+#         return look_number
+#     else:
+#         return ''
 
 
 def get_valid_columns_name(df):
@@ -296,27 +296,15 @@ def convert_date_to_str_df(df, column_name):
 
 # source_from_excel_df = df with data Vika + add other columns
 # pdf_df - pdf file names (ВН, ТТН)
-def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir, date_of_payments):
-    pdf_df = pdf_df.astype(str)
-    # df = pd.read_excel(excel_file_source, sheet_name='df')
-    source_from_excel_df = source_from_excel_df.astype(str)
+def merge_excel_and_word(excel_df, excel_dir, date_of_payments):
+    excel_df = excel_df.astype(str)
     template = r"\\PRESTIGEPRODUCT\Scan\Maket.docx"
 
-    for i, row in source_from_excel_df.iterrows():
+    for i, row in excel_df.iterrows():
         try:
-            doc_number = row['номерРеализации']
-            if len(pdf_df) > 0:
-                number_invoice = get_doctype_by_invoice_number(pdf_df, doc_number, 'ВН')
-                if number_invoice == '':
-                    number_invoice = get_doctype_by_invoice_number(pdf_df, doc_number, 'BH')
-                number_transport = get_doctype_by_invoice_number(pdf_df, doc_number, 'ТТН')
-                if number_transport == '':
-                    number_transport = get_doctype_by_invoice_number(pdf_df, doc_number, 'TTH')
-            else:
-                number_invoice = ''
-                number_transport = ''
-
-            if number_invoice != '':
+            number_invoice = row['номерРеализации']
+            number_transport = row['ТТН_1Сномер']
+            if row['файл ВН'] != '':
                 doc_sale_header = number_invoice
                 number_invoice = f"Видаткова накладна № {number_invoice} від {row['датаРеализации']} р."
             else:
@@ -325,8 +313,9 @@ def merge_excel_and_word(source_from_excel_df, pdf_df, excel_dir, date_of_paymen
                 else:
                     doc_sale_header = ''
 
-            if number_transport != '':
-                number_transport = f"Товаро транспортна накладна № {number_transport} від {row['датаРеализации']} р."
+            number_transport = row['ТТН_1Сномер']
+            if row['файл ТТН'] != '':
+                number_transport = f"Товаро транспортна накладна № {number_transport} від {row['ТТН_1Сдата']} р."
 
             if number_invoice == '' and number_transport == '':
                 continue
@@ -409,6 +398,9 @@ def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
     except Exception as e:
         print(str(e))
 
+    finally:
+        return df_merge
+
 
 # create sheet "df" in current file_excel
 # if there are pdf files on current folder added doc_type in Excel
@@ -465,7 +457,7 @@ def merge_excle_word_main(excel_file):
     date_of_payments = get_bank_statement(date_of_payment)
 
     df_merge = merge_excel_and_pdf_df(excel_df, pdf_files_df, excel_file)
-    merge_excel_and_word(df_merge, pdf_files_df, excel_dir, date_of_payments)
+    merge_excel_and_word(df_merge, excel_dir, date_of_payments)
 
 
 if __name__ == '__main__':

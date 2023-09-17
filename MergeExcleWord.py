@@ -77,7 +77,8 @@ def counterparty_name_add_to_df(path_to_file_excel):
         df = df[df['Обсяг операцій'] != 0.00]  # док корректировка не учитывать
 
     except Exception as e:
-        print(str(e))
+        # print(str(e))
+        pass
 
     finally:
         return df
@@ -413,7 +414,7 @@ def control_columns_name_in_excel_source(df):
                     'Податковий номер Покупця', 'Обсяг операцій', 'Сумв ПДВ']
     all_in_df = all(item in df.columns for item in need_columns)
     if not all_in_df:
-        print("Проверьте, чтобы в Excel содержал все колонки", need_columns)
+        print("ERROR: Проверьте, чтобы Excel содержал все колонки", need_columns)
 
     return all_in_df
 
@@ -472,16 +473,15 @@ def merge_excle_word_main(excel_file):
 
     # add other column to source - excel + adding df with pdf files
     excel_df = excel_to_df(excel_file)
-    if len(excel_df) == 0:
-        sys.exit(0)
-    counterparty_uuid = get_counterparty_uuid_from_excel_df(excel_df)
+    if len(excel_df) != 0:
+        counterparty_uuid = get_counterparty_uuid_from_excel_df(excel_df)
 
-    pdf_files_df, date_of_payment = get_pdf_set_with_date_in_file_name(excel_dir, counterparty_uuid)
-    date_of_payments = get_bank_statement(date_of_payment)
+        pdf_files_df, date_of_payment = get_pdf_set_with_date_in_file_name(excel_dir, counterparty_uuid)
+        date_of_payments = get_bank_statement(date_of_payment)
 
-    df_merge = merge_excel_and_pdf_df(excel_df, pdf_files_df, excel_file)
-    if date_of_payments != '':
-        merge_excel_and_word(df_merge, excel_dir, date_of_payments)
+        df_merge = merge_excel_and_pdf_df(excel_df, pdf_files_df, excel_file)
+        if date_of_payments != '':
+            merge_excel_and_word(df_merge, excel_dir, date_of_payments)
 
 
 if __name__ == '__main__':

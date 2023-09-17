@@ -1,5 +1,5 @@
 # pip install pyinstaller
-# pyinstaller - -onefile start.py
+# pyinstaller --onefile start.py
 
 import os
 import sys

@@ -4,11 +4,15 @@
 *.iml
 *.png
 *.jpg
+/.tox
 *.xls*
 *.spec
+*.toc
 /.idea
 /output
 /venv
+/dist
+/build
 /poppler-23.08.0
 /docx-template
 __init__.*

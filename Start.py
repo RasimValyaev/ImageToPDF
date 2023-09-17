@@ -1,3 +1,6 @@
+# pip install pyinstaller
+# pyinstaller - -onefile start.py
+
 import os
 import sys
 import tkinter as tk

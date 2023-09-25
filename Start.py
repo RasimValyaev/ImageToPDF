@@ -42,7 +42,7 @@ if __name__ == '__main__':
         if result != 'yes':
             sys.exit(0)
 
-    print("Нашел Шаблон письма")
+    print(f"Нашел Шаблон письма {template}")
     button = tk.Button(root, text="Выберите Excel файл", command=select_file)
     button.pack()
 

@@ -19,6 +19,8 @@ import pandas as pd
 import os.path
 import xlrd
 import warnings
+import tkinter as tk
+from tkinter import filedialog, messagebox  # don't remove. using in Start.py
 from dateutil.parser import parse
 from pathlib import Path
 from pathvalidate import sanitize_filepath
@@ -29,6 +31,8 @@ from DetailsForTaxDocument import get_counterparty_by_texcode, get_list_of_tax_f
 from TTN import get_ttn_details, add_ttn_details_to_df
 from Word2Pdf import word_2_pdf
 from ConvertXlsToXlsx import convert_xls_to_xlsx
+
+root = tk.Tk()
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -260,7 +264,10 @@ def fing_incorrect_date(df):
         try:
             parse(row['датаРеализации'])
         except:
-            print("Проверьте на корректность даты в имени файла", row['filename'])
+            msg = "Проверьте на корректность даты в имени файла"
+            print(msg, row['filename'])
+            label = tk.Label(root, text=msg)
+            label.pack()
             continue
 
 
@@ -444,11 +451,15 @@ def get_bank_statement(date_of_payments):
     result = ''
     size = len(date_of_payments)
     if size == 0:
-        print("\n*****************************************************************"
-              "\nВыписки банка в формате pdf в текущем каталоге НЕ обнаружены."
-              "\nФормирование писем НЕ осуществляется"
-              "\n*****************************************************************\n"
-              )
+        msg = ("\n*****************************************************************"
+               "\nВыписки банка в формате pdf в текущем каталоге НЕ обнаружены."
+               "\nФормирование писем ПРЕКРАЩЕНО"
+               "\n*****************************************************************\n"
+               )
+        print(msg)
+        label = tk.Label(root, text=msg)
+        label.pack()
+
     else:
         for i, date in enumerate(date_of_payments):
             if i != (size - 1):
@@ -465,7 +476,11 @@ def get_counterparty_uuid_from_excel_df(df: pd.DataFrame()):
 
 def merge_excle_word_main(excel_file):
     if not os.path.exists(excel_file):
-        print("Не найден Excel файл", excel_file)
+        msg = ("Не найден Excel файл", excel_file)
+        print(msg)
+        label = tk.Label(root, text=msg)
+        label.pack()
+
         sys.exit(0)
 
     # creating df with pdf files
@@ -480,7 +495,11 @@ def merge_excle_word_main(excel_file):
         date_of_payments = get_bank_statement(date_of_payment)
 
         if len(pdf_files_df) == 0:
-            print("Не обнаружены сканы начинающиеся на ВН, ТТН, БВ\n")
+            msg = "Не обнаружены сканы начинающиеся на ВН, ТТН, БВ\n"
+            print(msg)
+            label = tk.Label(root, text=msg)
+            label.pack()
+
 
         df_merge = merge_excel_and_pdf_df(excel_df, pdf_files_df, excel_file)
         if date_of_payments != '':

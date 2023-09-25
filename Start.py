@@ -3,15 +3,15 @@
 
 import os
 import sys
-import tkinter as tk
-from tkinter import filedialog, messagebox
-from MergeExcleWord import merge_excle_word_main
+from MergeExcleWord import merge_excle_word_main, root, filedialog, messagebox, tk
 
 
 def select_file():
     excel_file_source = filedialog.askopenfilename(filetypes=[("Excel files", ["*.xls", "*.xlsx"])])
     if excel_file_source != '':
-        print("Вы выбрали файл", excel_file_source)
+        msg = f"Вы выбрали файл: {excel_file_source}"
+        label = tk.Label(root, text=msg)
+        label.pack()
         merge_excle_word_main(excel_file_source)
         messagebox.showinfo("PrestigeProduct", "Завершено!")
         sys.exit(0)
@@ -19,9 +19,8 @@ def select_file():
 
 if __name__ == '__main__':
 
-    root = tk.Tk()
     root.title("PrestigeProduct")
-    root.geometry("600x200")
+    root.geometry("600x800")
     root.grid_rowconfigure(index=0, weight=1)
     root.grid_columnconfigure(index=0, weight=1)
 

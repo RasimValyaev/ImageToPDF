@@ -16,17 +16,20 @@ def select_file():
         messagebox.showinfo("PrestigeProduct", "Завершено!")
         sys.exit(0)
 
+
 if __name__ == '__main__':
 
     root = tk.Tk()
     root.title("PrestigeProduct")
-    root.geometry("400x100")
+    root.geometry("600x200")
     root.grid_rowconfigure(index=0, weight=1)
     root.grid_columnconfigure(index=0, weight=1)
 
-    label = tk.Label(root, text="Выбираемый Excel файл должен быть в папке со сканам.\n"
-                                "Наименование файлов должно начинаться на ВН или ТТН и иметь расширение pdf.\n"
-                                "Банковские выписки: БВ дата.pdf\n"
+    label = tk.Label(root, text="Выбираемый Excel файл должен быть в папке со сканами."
+                                "\n\nНаименование файлов должно начинаться на ВН и/или ТТН и иметь расширение pdf."
+                                "\n(иначе в письме будут пустоты)"
+                                "\n\nБанковские выписки: БВ дата.pdf"
+                                "\n(иначе письма НЕ формируются)\n"
                      )
     label.pack()
 

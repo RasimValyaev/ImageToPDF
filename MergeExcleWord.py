@@ -479,6 +479,9 @@ def merge_excle_word_main(excel_file):
         pdf_files_df, date_of_payment = get_pdf_set_with_date_in_file_name(excel_dir, counterparty_uuid)
         date_of_payments = get_bank_statement(date_of_payment)
 
+        if len(pdf_files_df) == 0:
+            print("Не обнаружены сканы начинающиеся на ВН, ТТН, БВ\n")
+
         df_merge = merge_excel_and_pdf_df(excel_df, pdf_files_df, excel_file)
         if date_of_payments != '':
             merge_excel_and_word(df_merge, excel_dir, date_of_payments)

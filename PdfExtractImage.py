@@ -63,9 +63,9 @@ def extract_image(file_image, dir_out, out_format="jpeg"):
 
 
 if __name__ == '__main__':
-    file = r"C:\Rasim\Python\Prestige\TelegramBot\001694007370.pdf"
+    file = r"\\PRESTIGEPRODUCT\Scan\Люксвен Ритейл\ТТН 01386 10.02.2023.pdf"
     # Output directory for the extracted images
-    output_dir = r"C:\Users\Rasim\Desktop\Scan\New\АльянсМаркет\ТТН 3664 20.03.2023"
+    output_dir = r"\\PRESTIGEPRODUCT\Scan\Люксвен Ритейл\Pdf"
     # Desired output image format
     output_format = "jpeg"
     extract_image(file, output_dir, output_format)

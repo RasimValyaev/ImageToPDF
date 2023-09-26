@@ -22,7 +22,7 @@ def get_size_format(b, factor=1024, suffix="B"):
     return f"{b:.2f}Y{suffix}"
 
 
-def compress_img(image_name, new_size_ratio=1, quality=20, width=1240, height=1754, to_jpg=True):
+def compress_img(image_name, new_size_ratio=0.99, quality=100, width=1240, height=1754, to_jpg=True):
     try:
         # load the image to memory
         img = Image.open(image_name)
@@ -117,4 +117,5 @@ def parse_cmd_argument():
 
 
 if __name__ == "__main__":
-    compress_img(r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\Resize\SprArh_TagarMemet_1930.02.09 AnketaArest_str2.jpg")
+    image_path = r"\\PRESTIGEPRODUCT\Scan\Люксвен Ритейл\Pdf\ТТН 01386 10.02.2023_2_1.jpeg"
+    compress_img(image_path)

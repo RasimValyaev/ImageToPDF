@@ -20,6 +20,8 @@ import os.path
 import xlrd
 import warnings
 import tkinter as tk
+from queue import Empty, Queue
+from threading import Thread
 from tkinter import filedialog, messagebox  # don't remove. using in Start.py
 from dateutil.parser import parse
 from pathlib import Path
@@ -33,6 +35,7 @@ from Word2Pdf import word_2_pdf
 from ConvertXlsToXlsx import convert_xls_to_xlsx
 
 root = tk.Tk()
+# result_queue = Queue()
 
 warnings.filterwarnings("ignore", category=UserWarning)
 

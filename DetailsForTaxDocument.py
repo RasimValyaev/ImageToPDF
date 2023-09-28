@@ -1,7 +1,8 @@
 import os
 import sys
-from datetime import datetime
 import requests
+from dateutil.parser import parse
+from datetime import datetime
 
 if os.environ['COMPUTERNAME'] == 'PRESTIGEPRODUCT':
     CONFIG_PATH = r"d:\Prestige\Python\Config"
@@ -14,65 +15,52 @@ sys.path.append(os.path.abspath(CONFIG_PATH))
 from configPrestige import DATA_AUTH
 
 
-def get_counterparty_by_texcode(counterparty_code):
+def get_data_from_taxdoc(taxdoc_date, taxdoc_number, counterparty_taxnumber):
     counterparty = []
-    url = (r"http://192.168.1.254/utp_prestige/odata/standard.odata/Catalog_Контрагенты?$format=json&$"
-           fr"filter=КодПоЕДРПОУ eq '{counterparty_code}'&$select=Ref_Key,Description")
+    year = parse(taxdoc_date, dayfirst=True).year
+    month = parse(taxdoc_date, dayfirst=True).month
+    date = parse(taxdoc_date, dayfirst=True).day
+    url = ("http://192.168.1.254/utp_prestige/odata/standard.odata/Document_НалоговаяНакладная?"
+           f"$format=json&$filter=Posted eq true and endswith(Number, '{taxdoc_number}') eq true "
+           f"and year(Date) eq {year} and month(Date) eq {month} and day(Date) eq {date} "
+           f"and Контрагент/ИНН eq '{counterparty_taxnumber}'&$inlinecount=allpages&$expand=*")
+
     resp = requests.get(url, auth=DATA_AUTH)
     if resp.status_code == 200:
         if len(resp.json()['value']) != 0:
-            counterparty = resp.json()['value'][0].values()
+            counterparty = resp.json()['value'][0]
+        else:
+            print("Не нашел клиента с ИНН ", counterparty_taxnumber)
 
     return counterparty
 
 
-def get_doc_sale_details(uuid):
+def get_doc_transport(doc_uuid, doc_type_is_sale='Document_РеализацияТоваровУслуг'):
     result = ''
-    url = (
-        r"http://192.168.1.254/utp_prestige/odata/standard.odata/Document_РеализацияТоваровУслуг/?$format=json"
-        r"&$filter=Posted eq true and ОтражатьВУправленческомУчете eq true "
-        fr"and Ref_Key eq guid'{uuid}'&$select=Number,Date")
+    url = (r"http://192.168.1.254/utp_prestige/odata/standard.odata/Document_скТоварноТранспортнаяНакладная?"
+           r"$expand=ДокументОснование&$format=json&$select=Date,Number,Ref_Key"
+           f"&$filter=cast(guid'{doc_uuid}','{doc_type_is_sale}') eq ДокументОснование")
     resp = requests.get(url, auth=DATA_AUTH)
     if resp.status_code == 200:
-        result = resp.json()['value'][0]
+        if len(resp.json()['value']) != 0:
+            result = resp.json()['value'][0]
 
     return result
 
 
-def get_contract_details(uuid):
+def get_doc_sale_details(doc_uuid, doc_type_is_sale='Document_РеализацияТоваровУслуг'):
     result = ''
-    url = (r"http://192.168.1.254/utp_prestige/odata/standard.odata/Catalog_ДоговорыКонтрагентов?$format=json"
-           fr"&$inlinecount=allpages&$filter=Ref_Key eq guid'{uuid}'"
-           r"&$select=Description,_НКС_ДнівВідтермінуванняОплати,Номер,Дата")
+    url = ("http://192.168.1.254/utp_prestige/odata/standard.odata/Document_РеализацияТоваровУслуг/?"
+           f"$format=json&$select=Date,Number,Сделка,Сделка_Type"
+           f"&$inlinecount=allpages&$filter=Posted eq true and Ref_Key eq guid'{doc_uuid}'&$expand=*")
     resp = requests.get(url, auth=DATA_AUTH)
     if resp.status_code == 200:
         result = resp.json()['value'][0]
-
-    return result
-
-
-def get_list_of_tax_fatura(date_sale, client_uuid):
-    result = ''
-    date_sale = datetime.strptime(date_sale, "%d.%m.%Y")
-    day = date_sale.day
-    month = date_sale.month
-    year = date_sale.year
-
-    url = ("http://192.168.1.254/utp_prestige/odata/standard.odata/Document_НалоговаяНакладная?$format=json"
-           f"&$orderby=Date desc&$filter=Контрагент_Key eq guid'{client_uuid}'"
-           f"and year(Date) eq {year} "
-           f"and month(Date) eq {month} "
-           f"and day(Date) eq {day}"
-           "&$select=Number,Date,ДокументОснование,ДоговорКонтрагента_Key")
-
-    resp = requests.get(url, auth=DATA_AUTH)
-    if resp.status_code == 200:
-        result = resp.json()['value']
 
     return result
 
 
 if __name__ == '__main__':
     tax_code = '425477026551'
-    counterparty = get_counterparty_by_texcode(tax_code)
+    counterparty = get_counterparty_by_taxcode(tax_code)
     print(counterparty)

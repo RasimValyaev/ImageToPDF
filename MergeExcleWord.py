@@ -79,7 +79,6 @@ def counterparty_name_add_to_df(path_to_file_excel):
         df['датаРеализации'] = None
         df['месяц'] = None
         df['год'] = None
-        # df[''] = None
         df = df[df['Обсяг операцій'] != 0.00]  # док корректировка(возвраты) не учитывать
 
         for i, row in df.iterrows():
@@ -89,8 +88,8 @@ def counterparty_name_add_to_df(path_to_file_excel):
                 if len(taxdoc) > 0:
                     client_uuid = taxdoc['Контрагент']['Ref_Key']
                     client_name = taxdoc['Контрагент']['Description']
-                    print(client_name)
                     taxdoc_number = taxdoc['Number']
+                    print(client_name, taxdoc_number)
                     contract = taxdoc['ДоговорКонтрагента']
                     invoice_uuid = taxdoc['ДокументВводаНаОсновании']
                     invoice = get_doc_sale_details(invoice_uuid)
@@ -105,7 +104,9 @@ def counterparty_name_add_to_df(path_to_file_excel):
                             df.at[i, 'ТТН_1Сдата'] = parse(doc_transport['Date'], dayfirst=True).strftime("%d.%m.%Y")
                             df.at[i, 'ТТН_1Сномер'] = int(re.search(r"\d+", doc_transport['Number'])[0])
                         else:
-                            print("Не нашел док ТТН", invoice['Number'], invoice['Date'])
+                            msg = ("Не нашел док ТТН", invoice['Number'], invoice['Date'])
+                            label = tk.Label(root, text=msg)
+                            label.pack()
 
                     df.at[i, 'контрагент1С'] = client_name
                     df.at[i, 'номерНН_оригинал'] = taxdoc_number
@@ -120,10 +121,17 @@ def counterparty_name_add_to_df(path_to_file_excel):
                     df.at[i, 'месяц'] = MONTH[parse(invoice['Date'], dayfirst=True).month - 1]
                     df.at[i, 'год'] = parse(invoice['Date'], dayfirst=True).year
                 else:
-                    print("Не нашел клиента с НалогНакл ", row["Дата складання ПН/РК"], row["Порядковий № ПН/РК"]
+                    msg = ("Не нашел клиента с НалогНакл ", row["Дата складання ПН/РК"], row["Порядковий № ПН/РК"]
                           , row['ІПН Покупця'])
+                    print(msg)
+                    label = tk.Label(root, text=msg)
+                    label.pack()
+
             except Exception as e:
-                print(str(e))
+                msg = str(e)
+                print(msg)
+                label = tk.Label(root, text=msg)
+                label.pack()
 
     except Exception as e:
         print(str(e))

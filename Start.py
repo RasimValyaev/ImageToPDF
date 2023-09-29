@@ -23,10 +23,10 @@ def select_file():
         else:
             print(f"Нашел Шаблон письма {template}")
 
-        msg = f"Вы выбрали файл: {excel_file_source}"
+        msg = f"Вы выбрали файл: {Path(excel_file_source)}"
         label = tk.Label(root, text=msg)
         label.pack()
-        merge_excle_word_main(excel_file_source)
+        merge_excle_word_main(excel_file_source,template)
         messagebox.showinfo("PrestigeProduct", "Завершено!")
         sys.exit(0)
 

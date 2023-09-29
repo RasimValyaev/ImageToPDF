@@ -364,7 +364,11 @@ def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
     try:
         with pd.ExcelWriter(save_as) as writer:
             df_merge.to_excel(writer, sheet_name='excel_df', index=False)
-        print("Создан файл", save_as)
+        msg = "Создан файл %s" % save_as
+        print(msg)
+        label = tk.Label(root, text=msg)
+        label.pack()
+
     except Exception as e:
         print(str(e))
 
@@ -430,7 +434,7 @@ def get_counterparty_uuid_from_excel_df(df: pd.DataFrame()):
     return counterparty_uuid.counterparty_key.unique().to_list()
 
 
-def merge_excle_word_main(excel_file):
+def merge_excle_word_main(excel_file, template):
     if not os.path.exists(excel_file):
         msg = ("Не найден Excel файл", excel_file)
         print(msg)
@@ -457,7 +461,7 @@ def merge_excle_word_main(excel_file):
             label.pack()
 
         df_merge = merge_excel_and_pdf_df(excel_df, pdf_files_df, excel_file)
-        if date_of_payments != '':
+        if date_of_payments != '' and template.exists():
             merge_excel_and_word(df_merge, excel_dir, date_of_payments)
 
 

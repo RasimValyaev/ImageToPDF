@@ -114,7 +114,7 @@ def counterparty_name_add_to_df(path_to_file_excel):
                         df.at[i, 'ТТН_1Сномер'] = int(re.search(r"\d+", doc_transport['Number'])[0])
                         df.at[i, 'ТТН_uuid'] = doc_transport['Ref_Key']
                     else:
-                        msg = ("в 1С нет ТТН к ВН", invoice['Number'], 'от', invoice['Date'])
+                        msg = f"в 1С нет ТТН к ВН {invoice['Number']} от {invoice['Date']}"
                         df.at[i, 'ТТН_1Сдата'] = "отсутствует"
                         df.at[i, 'ТТН_1Сномер'] = "отсутствует"
                         print(msg)
@@ -134,8 +134,8 @@ def counterparty_name_add_to_df(path_to_file_excel):
                     df.at[i, 'месяц'] = MONTH[parse(invoice['Date'], dayfirst=True).month - 1]
                     df.at[i, 'год'] = parse(invoice['Date'], dayfirst=True).year
                 else:
-                    msg = ("Не нашел клиента с НалогНакл ", row["Дата складання ПН/РК"], row["Порядковий № ПН/РК"]
-                           , row['ІПН Покупця'])
+                    msg = f"Не нашел клиента к НалогНакл {row['Дата складання ПН/РК']} " \
+                          f"{row['Порядковий № ПН/РК']} {row['ІПН Покупця']}"
                     print(msg)
                     label = tk.Label(root, text=msg)
                     label.pack()
@@ -368,7 +368,10 @@ def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
         label.pack()
 
     except Exception as e:
-        print(str(e))
+        msg = f"Ошибка при сохранении файла в Excel: {str(e)}.\nВозможно файл {save_as} уже открыт"
+        print(msg)
+        label = tk.Label(root, text=msg)
+        label.pack()
 
     finally:
         return df_merge

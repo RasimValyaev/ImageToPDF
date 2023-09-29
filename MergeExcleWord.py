@@ -95,7 +95,7 @@ def counterparty_name_add_to_df(path_to_file_excel):
                     df.at[i, 'counterparty_key'] = client_uuid
                     client_name = taxdoc['Контрагент']['Description']
                     taxdoc_number = taxdoc['Number']
-                    print(client_name, taxdoc_number)
+                    # print(client_name, taxdoc_number)
                     contract = taxdoc['ДоговорКонтрагента']
                     invoice_uuid = taxdoc['ДокументВводаНаОсновании']
                     invoice = get_doc_sale_details(invoice_uuid)
@@ -108,20 +108,18 @@ def counterparty_name_add_to_df(path_to_file_excel):
                     if doc_transport == '' and doc_base_type == 'Document_ЗаказПокупателя':
                         doc_base_type = 'Document_РеализацияТоваровУслуг'
                         doc_transport = get_doc_transport(invoice_uuid, doc_base_type)
-                        if doc_transport != '':
-                            df.at[i, 'ТТН_1Сдата'] = parse(doc_transport['Date'], dayfirst=True).strftime("%d.%m.%Y")
-                            df.at[i, 'ТТН_1Сномер'] = int(re.search(r"\d+", doc_transport['Number'])[0])
-                        else:
-                            msg = ("Не нашел док ТТН", invoice['Number'], invoice['Date'])
-                            label = tk.Label(root, text=msg)
-                            label.pack()
 
                     if doc_transport != '':
                         df.at[i, 'ТТН_1Сдата'] = parse(doc_transport['Date'], dayfirst=True).strftime("%d.%m.%Y")
                         df.at[i, 'ТТН_1Сномер'] = int(re.search(r"\d+", doc_transport['Number'])[0])
                         df.at[i, 'ТТН_uuid'] = doc_transport['Ref_Key']
                     else:
-                        print("Не нашел док ТТН", invoice['Number'], invoice['Date'])
+                        msg = ("в 1С нет ТТН к ВН", invoice['Number'], 'от', invoice['Date'])
+                        df.at[i, 'ТТН_1Сдата'] = "отсутствует"
+                        df.at[i, 'ТТН_1Сномер'] = "отсутствует"
+                        print(msg)
+                        label = tk.Label(root, text=msg)
+                        label.pack()
 
                     df.at[i, 'контрагент1С'] = client_name
                     df.at[i, 'номерНН_оригинал'] = taxdoc_number

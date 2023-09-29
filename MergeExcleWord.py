@@ -137,7 +137,7 @@ def counterparty_name_add_to_df(path_to_file_excel):
                     df.at[i, 'год'] = parse(invoice['Date'], dayfirst=True).year
                 else:
                     msg = ("Не нашел клиента с НалогНакл ", row["Дата складання ПН/РК"], row["Порядковий № ПН/РК"]
-                          , row['ІПН Покупця'])
+                           , row['ІПН Покупця'])
                     print(msg)
                     label = tk.Label(root, text=msg)
                     label.pack()
@@ -236,6 +236,7 @@ def get_pdf_set_with_date_in_file_name(excel_path, counterparty_uuid: list):
     df_pdf = df_all[df_all['filename'].str.contains('.PDF')].reset_index(drop=True)
     df = df_pdf[df_pdf['filename'].str.contains('|'.join(doc_type_filter))].reset_index(drop=True)
     df['name'] = df['filename'].str.replace(r'.PDF', '').str.strip().reset_index(drop=True)
+    df['name'] = df['name'].replace(to_replace='[a-zA-Zа-яА-ЯёЁ —]*$', value='', regex=True)
     df['датаРеализации'] = df['name'].str.extract(f"({date_pattern})$", expand=False).str.strip().reset_index(drop=True)
     try:
         df['датаРеализации'] = pd.to_datetime(df['датаРеализации'], dayfirst=True)
@@ -341,7 +342,7 @@ def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
         pdf_files_transport_df = pdf_files_transport_df[['файл ТТН', 'doc_file_uuid']]
         df_merge = pd.merge(excel_df, pdf_files_invoice_df, how='left', left_on=['invoice_key'],
                             right_on=['doc_file_uuid'])
-        df_merge.drop(['doc_file_uuid'], axis=1, inplace=True) # не удалять!!!
+        df_merge.drop(['doc_file_uuid'], axis=1, inplace=True)  # не удалять!!!
         df_merge = pd.merge(df_merge, pdf_files_transport_df, how='left', left_on=['ТТН_uuid'],
                             right_on=['doc_file_uuid'])
         df_merge.drop(['doc_file_uuid', 'ТТН_uuid', 'invoice_key', 'contract_key', 'counterparty_key'], axis=1,

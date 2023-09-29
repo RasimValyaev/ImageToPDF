@@ -79,6 +79,11 @@ def counterparty_name_add_to_df(path_to_file_excel):
         df['датаРеализации'] = None
         df['месяц'] = None
         df['год'] = None
+        df['ТТН_uuid'] = None
+        df['invoice_key'] = None
+        df['contract_key'] = None
+        df['counterparty_key'] = None
+        # df[''] = None
         df = df[df['Обсяг операцій'] != 0.00]  # док корректировка(возвраты) не учитывать
 
         for i, row in df.iterrows():
@@ -87,12 +92,15 @@ def counterparty_name_add_to_df(path_to_file_excel):
                                               , row['ІПН Покупця'])
                 if len(taxdoc) > 0:
                     client_uuid = taxdoc['Контрагент']['Ref_Key']
+                    df.at[i, 'counterparty_key'] = client_uuid
                     client_name = taxdoc['Контрагент']['Description']
                     taxdoc_number = taxdoc['Number']
                     print(client_name, taxdoc_number)
                     contract = taxdoc['ДоговорКонтрагента']
                     invoice_uuid = taxdoc['ДокументВводаНаОсновании']
                     invoice = get_doc_sale_details(invoice_uuid)
+                    df.at[i, 'invoice_key'] = invoice_uuid
+                    df.at[i, 'contract_key'] = taxdoc['ДоговорКонтрагента_Key']
                     doc_base_uuid = invoice['Сделка']
                     doc_base_type = invoice['Сделка_Type']
                     doc_base_type = doc_base_type.replace('StandardODATA.', '')
@@ -107,6 +115,13 @@ def counterparty_name_add_to_df(path_to_file_excel):
                             msg = ("Не нашел док ТТН", invoice['Number'], invoice['Date'])
                             label = tk.Label(root, text=msg)
                             label.pack()
+
+                    if doc_transport != '':
+                        df.at[i, 'ТТН_1Сдата'] = parse(doc_transport['Date'], dayfirst=True).strftime("%d.%m.%Y")
+                        df.at[i, 'ТТН_1Сномер'] = int(re.search(r"\d+", doc_transport['Number'])[0])
+                        df.at[i, 'ТТН_uuid'] = doc_transport['Ref_Key']
+                    else:
+                        print("Не нашел док ТТН", invoice['Number'], invoice['Date'])
 
                     df.at[i, 'контрагент1С'] = client_name
                     df.at[i, 'номерНН_оригинал'] = taxdoc_number
@@ -326,7 +341,7 @@ def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
         pdf_files_transport_df = pdf_files_transport_df[['файл ТТН', 'doc_file_uuid']]
         df_merge = pd.merge(excel_df, pdf_files_invoice_df, how='left', left_on=['invoice_key'],
                             right_on=['doc_file_uuid'])
-        df_merge.drop(['doc_file_uuid'], axis=1, inplace=True)
+        df_merge.drop(['doc_file_uuid'], axis=1, inplace=True) # не удалять!!!
         df_merge = pd.merge(df_merge, pdf_files_transport_df, how='left', left_on=['ТТН_uuid'],
                             right_on=['doc_file_uuid'])
         df_merge.drop(['doc_file_uuid', 'ТТН_uuid', 'invoice_key', 'contract_key', 'counterparty_key'], axis=1,
@@ -446,6 +461,6 @@ def merge_excle_word_main(excel_file):
 
 
 if __name__ == '__main__':
-    # excel_file_source = r"\\PRESTIGEPRODUCT\Scan\Левайс\Левайс.xls"
-    excel_file_source = r"c:\Users\Rasim\Desktop\на суд с колич.xls"
+    excel_file_source = r"\\PRESTIGEPRODUCT\Scan\Левайс\Левайс.xls"
+    # excel_file_source = r"c:\Users\Rasim\Desktop\на суд с колич.xls"
     merge_excle_word_main(excel_file_source)

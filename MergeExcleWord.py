@@ -29,12 +29,12 @@ from pathvalidate import sanitize_filepath
 from datetime import datetime
 from mailmerge import MailMerge
 from DetailsForTaxDocument import get_data_from_taxdoc, get_doc_transport, get_doc_sale_details
-from TTN import get_ttn_details, add_ttn_details_to_df
+from TTN import add_ttn_details_to_df
 from Word2Pdf import word_2_pdf
 from ConvertXlsToXlsx import convert_xls_to_xlsx
 
 root = tk.Tk()
-# result_queue = Queue()
+DATE_PATTERN = r"\b\d{1,2}[,. \-_/\\]\d{1,2}[,. \-_/\\]\d{2,4}\b"
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -45,6 +45,17 @@ MONTH = ['січні', 'лютому', 'березні', 'квітні', 'тра
          'листопаду', 'грудні']
 
 NUMBER_FIRST = 1  # номер заявления начинается с этого числа
+
+
+def change_separator(x):
+    try:
+        x = float(x)
+        # Если это удается, то форматируем x с запятой в качестве разделителя
+        x = "{:,.2f}".format(x)
+    except:
+        pass
+
+    return x
 
 
 def counterparty_name_add_to_df(path_to_file_excel):
@@ -125,9 +136,31 @@ def counterparty_name_add_to_df(path_to_file_excel):
                     df.at[i, 'номерНН_оригинал'] = taxdoc_number
                     df.at[i, 'counterparty_key'] = client_uuid
                     df.at[i, 'договор'] = contract['Description']
-                    df.at[i, 'договорНомер'] = contract['Номер']
-                    df.at[i, 'договорДата'] = parse(contract['Дата'], dayfirst=True).strftime("%d.%m.%Y")
-                    df.at[i, 'договорДней'] = contract['_НКС_ДнівВідтермінуванняОплати']
+
+                    if contract['Номер'] == '':
+                        msg = f"{client_name} Не заполнен номер договора"
+                        print(msg)
+                        label = tk.Label(root, text=msg)
+                        label.pack()
+                    else:
+                        df.at[i, 'договорНомер'] = contract['Номер']
+
+                    if contract['Дата'] == '0001-01-01T00:00:00':
+                        msg = f"{client_name} Не заполнена дата договора"
+                        print(msg)
+                        label = tk.Label(root, text=msg)
+                        label.pack()
+                    else:
+                        df.at[i, 'договорДата'] = parse(contract['Дата'], dayfirst=True).strftime("%d.%m.%Y")
+
+                    if contract['_НКС_ДнівВідтермінуванняОплати'] in [0, '']:
+                        msg = f"{client_name} Не заполнено кол-во дней отсрочки платежа"
+                        print(msg)
+                        label = tk.Label(root, text=msg)
+                        label.pack()
+                    else:
+                        df.at[i, 'договорДней'] = contract['_НКС_ДнівВідтермінуванняОплати']
+
                     df.at[i, 'номерРеализацииОриг'] = invoice['Number']
                     df.at[i, 'номерРеализации'] = int(re.search(r"\d+", invoice['Number'])[0])
                     df.at[i, 'датаРеализации'] = parse(invoice['Date'], dayfirst=True).strftime("%d.%m.%Y")
@@ -200,8 +233,7 @@ def add_other_parameters_to_df(df):
 
 
 def counterparty_payment(directory):
-    date_pattern = r"\d{1,2}[.,-_ ]\d{1,2}[.,-_ ]\d{2,4}"
-    ext = f'{date_pattern}.(pdf|PDF)$'
+    ext = f'{DATE_PATTERN}.(pdf|PDF)$'
     for filename in os.listdir(directory):
         filename = filename.upper()
         try:
@@ -226,7 +258,6 @@ def fing_incorrect_date(df):
 
 # pdf set with date in file name
 def get_pdf_set_with_date_in_file_name(excel_path, counterparty_uuid: list):
-    date_pattern = r"\d{1,2}[.,-_ ]\d{1,2}[.,-_ ]\d{2,4}"
     doc_type_filter = ['БВ', 'БB', 'РН', 'PH', 'ВН', 'BH', 'TTH', 'ТТН']
     doc_type_ptrn = r"(^[а-яА-ЯёЁa-zA-Z]{2,3})"
     df_all = pd.DataFrame({'filename': os.listdir(excel_path)})
@@ -234,8 +265,9 @@ def get_pdf_set_with_date_in_file_name(excel_path, counterparty_uuid: list):
     df_pdf = df_all[df_all['filename'].str.contains('.PDF')].reset_index(drop=True)
     df = df_pdf[df_pdf['filename'].str.contains('|'.join(doc_type_filter))].reset_index(drop=True)
     df['name'] = df['filename'].str.replace(r'.PDF', '').str.strip().reset_index(drop=True)
-    df['name'] = df['name'].replace(to_replace='[a-zA-Zа-яА-ЯёЁ —]*$', value='', regex=True)
-    df['датаРеализации'] = df['name'].str.extract(f"({date_pattern})$", expand=False).str.strip().reset_index(drop=True)
+    # df['name'] = df['name'].replace(to_replace='[a-zA-Zа-яА-ЯёЁ —]*$', value='', regex=True)
+    # df['датаРеализации'] = df['name'].str.extract(DATE_PATTERN, expand=False).str.strip().reset_index(drop=True)
+    df["датаРеализации"] = df["name"].apply(lambda x: re.search(DATE_PATTERN, x).group())
     try:
         df['датаРеализации'] = pd.to_datetime(df['датаРеализации'], dayfirst=True)
     except:
@@ -258,7 +290,8 @@ def get_pdf_set_with_date_in_file_name(excel_path, counterparty_uuid: list):
 
 def convert_date_to_str_df(df, column_name):
     df[column_name] = df[column_name].astype(str)
-    df[column_name] = pd.to_datetime(df[column_name], dayfirst=True).dt.strftime('%d.%m.%Y')
+    df[column_name] = pd.to_datetime(df[column_name], format="%d.%m.%Y", errors="coerce", dayfirst=True).dt.strftime(
+        '%d.%m.%Y')
     return df
 
 
@@ -359,6 +392,10 @@ def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
     save_as = Path(Path(path_excel).parent, Path(path_excel).stem + '_new' + Path(path_excel).suffix)
     # with pd.ExcelWriter(save_as, mode='a', if_sheet_exists='new') as writer:
     #     df_merge.to_excel(writer, sheet_name='excel_df', index=False)
+
+    df_merge['договорНомер'] = df_merge['договорНомер'].fillna("отсутствует")
+    df_merge['договорДата'] = df_merge['договорДата'].fillna("отсутствует")
+    df_merge["Статус_ПН/РК"] = df_merge["Статус_ПН/РК"].apply(change_separator)
     try:
         with pd.ExcelWriter(save_as) as writer:
             df_merge.to_excel(writer, sheet_name='excel_df', index=False)

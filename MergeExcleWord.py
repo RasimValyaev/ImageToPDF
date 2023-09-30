@@ -109,6 +109,8 @@ def counterparty_name_add_to_df(path_to_file_excel):
                     # print(client_name, taxdoc_number)
                     contract = taxdoc['ДоговорКонтрагента']
                     invoice_uuid = taxdoc['ДокументВводаНаОсновании']
+                    if len(invoice_uuid) == 0:
+                        invoice_uuid = taxdoc['ДокументОснование']
                     invoice = get_doc_sale_details(invoice_uuid)
                     df.at[i, 'invoice_key'] = invoice_uuid
                     df.at[i, 'contract_key'] = taxdoc['ДоговорКонтрагента_Key']

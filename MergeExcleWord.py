@@ -59,136 +59,140 @@ def change_separator(x):
 
 
 def counterparty_name_add_to_df(path_to_file_excel):
-    df = pd.DataFrame()
-    try:
-        df = pd.read_excel(path_to_file_excel, sheet_name=0)
-        if not control_columns_name_in_excel_source(df):
-            df = pd.DataFrame()
-        np.round(df, decimals=2)
+    df = pd.read_excel(path_to_file_excel, sheet_name=0)
+    if control_columns_name_in_excel_source(df):
+        try:
 
-        if df['Дата складання ПН/РК'].dtype in ['int64', 'float64']:
-            df["Дата складання ПН/РК"] = df["Дата складання ПН/РК"].map(lambda x: datetime(*xlrd.xldate_as_tuple(x, 0)))
-        df["Дата складання ПН/РК"] = pd.to_datetime(df["Дата складання ПН/РК"]).dt.strftime('%d.%m.%Y')
+            np.round(df, decimals=2)
 
-        if df["Дата реєстрації ПН/РК в ЄРПН"].dtype in ['int64', 'float64']:
-            df["Дата реєстрації ПН/РК в ЄРПН"] = df["Дата реєстрації ПН/РК в ЄРПН"].map(
-                lambda x: datetime(*xlrd.xldate_as_tuple(x, 0)))
-        df["Дата реєстрації ПН/РК в ЄРПН"] = pd.to_datetime(df["Дата реєстрації ПН/РК в ЄРПН"]).dt.strftime('%d.%m.%Y')
+            if df['Дата складання ПН/РК'].dtype in ['int64', 'float64']:
+                df["Дата складання ПН/РК"] = df["Дата складання ПН/РК"].map(
+                    lambda x: datetime(*xlrd.xldate_as_tuple(x, 0)))
+            df["Дата складання ПН/РК"] = pd.to_datetime(df["Дата складання ПН/РК"]).dt.strftime('%d.%m.%Y')
 
-        df['контрагент1С'] = None
-        df['counterparty_key'] = None
-        df['номерНН_оригинал'] = None
-        df['договор'] = None
-        df['договорНомер'] = None
-        df['договорДата'] = None
-        df['договорДней'] = None
-        df['ТТН_1Сномер'] = None
-        df['ТТН_1Сдата'] = None
-        df['НомерТТН_и_ВН_1С'] = None
-        df['номерРеализации'] = None
-        df['номерРеализацииОриг'] = None
-        df['датаРеализации'] = None
-        df['месяц'] = None
-        df['год'] = None
-        df['ТТН_uuid'] = None
-        df['invoice_key'] = None
-        df['contract_key'] = None
-        df['counterparty_key'] = None
-        # df[''] = None
-        df = df[df['Обсяг операцій'] != 0.00]  # док корректировка(возвраты) не учитывать
+            if df["Дата реєстрації ПН/РК в ЄРПН"].dtype in ['int64', 'float64']:
+                df["Дата реєстрації ПН/РК в ЄРПН"] = df["Дата реєстрації ПН/РК в ЄРПН"].map(
+                    lambda x: datetime(*xlrd.xldate_as_tuple(x, 0)))
+            df["Дата реєстрації ПН/РК в ЄРПН"] = pd.to_datetime(df["Дата реєстрації ПН/РК в ЄРПН"]).dt.strftime(
+                '%d.%m.%Y')
 
-        for i, row in df.iterrows():
-            try:
-                taxdoc = get_data_from_taxdoc(row["Дата складання ПН/РК"], row["Порядковий № ПН/РК"]
-                                              , row['ІПН Покупця'])
-                if len(taxdoc) > 0:
-                    client_uuid = taxdoc['Контрагент']['Ref_Key']
-                    df.at[i, 'counterparty_key'] = client_uuid
-                    client_name = taxdoc['Контрагент']['Description']
-                    taxdoc_number = taxdoc['Number']
-                    # print(client_name, taxdoc_number)
-                    contract = taxdoc['ДоговорКонтрагента']
-                    invoice_uuid = taxdoc['ДокументВводаНаОсновании']
-                    if len(invoice_uuid) == 0:
-                        invoice_uuid = taxdoc['ДокументОснование']
-                    if len(invoice_uuid) == 0:
-                        invoice_uuid = taxdoc['Сделка']
-                    invoice = get_doc_sale_details(invoice_uuid)
-                    df.at[i, 'invoice_key'] = invoice_uuid
-                    df.at[i, 'contract_key'] = taxdoc['ДоговорКонтрагента_Key']
-                    doc_base_uuid = invoice['Сделка']
-                    doc_base_type = invoice['Сделка_Type']
-                    doc_base_type = doc_base_type.replace('StandardODATA.', '')
-                    doc_transport = get_doc_transport(doc_base_uuid, doc_base_type)
-                    if doc_transport == '' and doc_base_type == 'Document_ЗаказПокупателя':
-                        doc_base_type = 'Document_РеализацияТоваровУслуг'
-                        doc_transport = get_doc_transport(invoice_uuid, doc_base_type)
+            df['контрагент1С'] = None
+            df['counterparty_key'] = None
+            df['номерНН_оригинал'] = None
+            df['договор'] = None
+            df['договорНомер'] = None
+            df['договорДата'] = None
+            df['договорДней'] = None
+            df['ТТН_1Сномер'] = None
+            df['ТТН_1Сдата'] = None
+            df['НомерТТН_и_ВН_1С'] = None
+            df['номерРеализации'] = None
+            df['номерРеализацииОриг'] = None
+            df['датаРеализации'] = None
+            df['месяц'] = None
+            df['год'] = None
+            df['ТТН_uuid'] = None
+            df['invoice_key'] = None
+            df['contract_key'] = None
+            df['counterparty_key'] = None
+            # df[''] = None
+            df = df[df['Обсяг операцій'] != 0.00]  # док корректировка(возвраты) не учитывать
 
-                    if doc_transport != '':
-                        df.at[i, 'ТТН_1Сдата'] = parse(doc_transport['Date'], dayfirst=True).strftime("%d.%m.%Y")
-                        df.at[i, 'ТТН_1Сномер'] = int(re.search(r"\d+", doc_transport['Number'])[0])
-                        df.at[i, 'ТТН_uuid'] = doc_transport['Ref_Key']
+            for i, row in df.iterrows():
+                try:
+                    taxdoc = get_data_from_taxdoc(row["Дата складання ПН/РК"], row["Порядковий № ПН/РК"]
+                                                  , row['ІПН Покупця'])
+                    if len(taxdoc) > 0:
+                        client_uuid = taxdoc['Контрагент']['Ref_Key']
+                        df.at[i, 'counterparty_key'] = client_uuid
+                        client_name = taxdoc['Контрагент']['Description']
+                        taxdoc_number = taxdoc['Number']
+                        # print(client_name, taxdoc_number)
+                        contract = taxdoc['ДоговорКонтрагента']
+                        invoice_uuid = taxdoc['ДокументВводаНаОсновании']
+                        if len(invoice_uuid) == 0:
+                            invoice_uuid = taxdoc['ДокументОснование']
+                        if len(invoice_uuid) == 0:
+                            invoice_uuid = taxdoc['Сделка']
+                        invoice = get_doc_sale_details(invoice_uuid)
+                        df.at[i, 'invoice_key'] = invoice_uuid
+                        df.at[i, 'contract_key'] = taxdoc['ДоговорКонтрагента_Key']
+                        doc_base_uuid = invoice['Сделка']
+                        doc_base_type = invoice['Сделка_Type']
+                        doc_base_type = doc_base_type.replace('StandardODATA.', '')
+                        doc_transport = get_doc_transport(doc_base_uuid, doc_base_type)
+                        if doc_transport == '' and doc_base_type == 'Document_ЗаказПокупателя':
+                            doc_base_type = 'Document_РеализацияТоваровУслуг'
+                            doc_transport = get_doc_transport(invoice_uuid, doc_base_type)
+
+                        if doc_transport != '':
+                            df.at[i, 'ТТН_1Сдата'] = parse(doc_transport['Date'], dayfirst=True).strftime("%d.%m.%Y")
+                            df.at[i, 'ТТН_1Сномер'] = int(re.search(r"\d+", doc_transport['Number'])[0])
+                            df.at[i, 'ТТН_uuid'] = doc_transport['Ref_Key']
+                        else:
+                            msg = f"в 1С нет ТТН к ВН {invoice['Number']} от {invoice['Date']}"
+                            df.at[i, 'ТТН_1Сдата'] = "отсутствует"
+                            df.at[i, 'ТТН_1Сномер'] = "отсутствует"
+                            print(msg)
+                            label = tk.Label(root, text=msg)
+                            label.pack()
+
+                        df.at[i, 'контрагент1С'] = client_name
+                        df.at[i, 'номерНН_оригинал'] = taxdoc_number
+                        df.at[i, 'counterparty_key'] = client_uuid
+                        df.at[i, 'договор'] = contract['Description']
+
+                        if contract['Номер'] == '':
+                            msg = f"{client_name} Не заполнен номер договора"
+                            print(msg)
+                            label = tk.Label(root, text=msg)
+                            label.pack()
+                        else:
+                            df.at[i, 'договорНомер'] = contract['Номер']
+
+                        if contract['Дата'] == '0001-01-01T00:00:00':
+                            msg = f"{client_name} Не заполнена дата договора"
+                            print(msg)
+                            label = tk.Label(root, text=msg)
+                            label.pack()
+                        else:
+                            df.at[i, 'договорДата'] = parse(contract['Дата'], dayfirst=True).strftime("%d.%m.%Y")
+
+                        if contract['_НКС_ДнівВідтермінуванняОплати'] in [0, '']:
+                            msg = f"{client_name} Не заполнено кол-во дней отсрочки платежа"
+                            print(msg)
+                            label = tk.Label(root, text=msg)
+                            label.pack()
+                        else:
+                            df.at[i, 'договорДней'] = contract['_НКС_ДнівВідтермінуванняОплати']
+
+                        df.at[i, 'номерРеализацииОриг'] = invoice['Number']
+                        df.at[i, 'номерРеализации'] = int(re.search(r"\d+", invoice['Number'])[0])
+                        df.at[i, 'датаРеализации'] = parse(invoice['Date'], dayfirst=True).strftime("%d.%m.%Y")
+                        df.at[i, 'месяц'] = MONTH[parse(invoice['Date'], dayfirst=True).month - 1]
+                        df.at[i, 'год'] = parse(invoice['Date'], dayfirst=True).year
                     else:
-                        msg = f"в 1С нет ТТН к ВН {invoice['Number']} от {invoice['Date']}"
-                        df.at[i, 'ТТН_1Сдата'] = "отсутствует"
-                        df.at[i, 'ТТН_1Сномер'] = "отсутствует"
+                        msg = f"Не нашел клиента к НалогНакл {row['Дата складання ПН/РК']} " \
+                              f"{row['Порядковий № ПН/РК']} {row['ІПН Покупця']}"
                         print(msg)
                         label = tk.Label(root, text=msg)
                         label.pack()
 
-                    df.at[i, 'контрагент1С'] = client_name
-                    df.at[i, 'номерНН_оригинал'] = taxdoc_number
-                    df.at[i, 'counterparty_key'] = client_uuid
-                    df.at[i, 'договор'] = contract['Description']
-
-                    if contract['Номер'] == '':
-                        msg = f"{client_name} Не заполнен номер договора"
-                        print(msg)
-                        label = tk.Label(root, text=msg)
-                        label.pack()
-                    else:
-                        df.at[i, 'договорНомер'] = contract['Номер']
-
-                    if contract['Дата'] == '0001-01-01T00:00:00':
-                        msg = f"{client_name} Не заполнена дата договора"
-                        print(msg)
-                        label = tk.Label(root, text=msg)
-                        label.pack()
-                    else:
-                        df.at[i, 'договорДата'] = parse(contract['Дата'], dayfirst=True).strftime("%d.%m.%Y")
-
-                    if contract['_НКС_ДнівВідтермінуванняОплати'] in [0, '']:
-                        msg = f"{client_name} Не заполнено кол-во дней отсрочки платежа"
-                        print(msg)
-                        label = tk.Label(root, text=msg)
-                        label.pack()
-                    else:
-                        df.at[i, 'договорДней'] = contract['_НКС_ДнівВідтермінуванняОплати']
-
-                    df.at[i, 'номерРеализацииОриг'] = invoice['Number']
-                    df.at[i, 'номерРеализации'] = int(re.search(r"\d+", invoice['Number'])[0])
-                    df.at[i, 'датаРеализации'] = parse(invoice['Date'], dayfirst=True).strftime("%d.%m.%Y")
-                    df.at[i, 'месяц'] = MONTH[parse(invoice['Date'], dayfirst=True).month - 1]
-                    df.at[i, 'год'] = parse(invoice['Date'], dayfirst=True).year
-                else:
-                    msg = f"Не нашел клиента к НалогНакл {row['Дата складання ПН/РК']} " \
-                          f"{row['Порядковий № ПН/РК']} {row['ІПН Покупця']}"
+                except Exception as e:
+                    msg = str(e)
                     print(msg)
                     label = tk.Label(root, text=msg)
                     label.pack()
 
-            except Exception as e:
-                msg = str(e)
-                print(msg)
-                label = tk.Label(root, text=msg)
-                label.pack()
+        except Exception as e:
+            print(str(e))
+            pass
 
-    except Exception as e:
-        print(str(e))
-        pass
+        finally:
+            return df
 
-    finally:
-        return df
+    else:
+        return pd.DataFrame()
 
 
 def get_valid_columns_name(df):
@@ -420,10 +424,13 @@ def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
 
 def control_columns_name_in_excel_source(df):
     need_columns = ['Реєстраційний номер', 'Дата складання ПН/РК', 'Дата реєстрації ПН/РК в ЄРПН',
-                    'Податковий номер Покупця', 'Обсяг операцій', 'Сумв ПДВ']
+                    'Податковий номер Покупця', 'Обсяг операцій', 'Сумв ПДВ', 'ІПН Покупця']
     all_in_df = all(item in df.columns for item in need_columns)
     if not all_in_df:
-        print("ERROR: Проверьте, чтобы Excel содержал все колонки", need_columns)
+        msg = f"ERROR: Проверьте, чтобы Excel содержал все колонки {need_columns}"
+        print(msg)
+        label = tk.Label(root, text=msg)
+        label.pack()
 
     return all_in_df
 
@@ -488,7 +495,6 @@ def merge_excle_word_main(excel_file, template):
 
     # creating df with pdf files
     excel_dir = Path(os.path.dirname(excel_file))
-
     # add other column to source - excel + adding df with pdf files
     excel_df = excel_to_df(excel_file)
     if len(excel_df) != 0:

@@ -26,9 +26,10 @@ def select_file():
         msg = f"Вы выбрали файл: {Path(excel_file_source)}"
         label = tk.Label(root, text=msg)
         label.pack()
+
         merge_excle_word_main(excel_file_source, template)
         messagebox.showinfo("PrestigeProduct", "Завершено!")
-        sys.exit(0)
+        # sys.exit(0)
 
 
 if __name__ == '__main__':

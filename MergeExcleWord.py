@@ -184,6 +184,8 @@ def counterparty_name_add_to_df(path_to_file_excel):
                     label = tk.Label(root, text=msg)
                     label.pack()
 
+            df['датаРеализации'] = df['датаРеализации'].str.replace(r'[, \-_/\\]', '.')
+
         except Exception as e:
             print(str(e))
             pass
@@ -276,6 +278,8 @@ def get_pdf_set_with_date_in_file_name(excel_path, counterparty_uuid: list):
     # df['name'] = df['name'].replace(to_replace='[a-zA-Zа-яА-ЯёЁ —]*$', value='', regex=True)
     # df['датаРеализации'] = df['name'].str.extract(DATE_PATTERN, expand=False).str.strip().reset_index(drop=True)
     df["датаРеализации"] = df["name"].apply(lambda x: re.search(DATE_PATTERN, x).group())
+    df['датаРеализации'] = df['датаРеализации'].str.replace(r'[,. \-_/\\]', '.', regex=True)
+
     try:
         df['датаРеализации'] = pd.to_datetime(df['датаРеализации'], dayfirst=True)
     except:

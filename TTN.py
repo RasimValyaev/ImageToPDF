@@ -60,7 +60,7 @@ def parse_date(date_doc):
 
 def get_catalog_by_url(doc_type):
     catalog = ''
-    if doc_type == 'ВН':
+    if doc_type in ['РН','ВН']:
         catalog = 'Document_РеализацияТоваровУслуг'
     elif doc_type == 'ТТН':
         catalog = 'Document_скТоварноТранспортнаяНакладная'
@@ -72,7 +72,7 @@ def get_addition_counterparty_to_url(doc_type, counterparty_uuid):
     add_to_url = ''
     if len(counterparty_uuid) < 2:
         client_uuid = counterparty_uuid[0][0]
-        if doc_type == 'ВН':
+        if doc_type in ['РН','ВН']:
             add_to_url = f" and Контрагент_Key eq guid'{client_uuid}'"
         if doc_type == 'ТТН' and len(counterparty_uuid) < 2:
             add_to_url = f" and cast(guid'{client_uuid}','Catalog_Контрагенты') eq Контрагент"

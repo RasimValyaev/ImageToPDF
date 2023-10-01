@@ -111,6 +111,8 @@ def counterparty_name_add_to_df(path_to_file_excel):
                     invoice_uuid = taxdoc['ДокументВводаНаОсновании']
                     if len(invoice_uuid) == 0:
                         invoice_uuid = taxdoc['ДокументОснование']
+                    if len(invoice_uuid) == 0:
+                        invoice_uuid = taxdoc['Сделка']
                     invoice = get_doc_sale_details(invoice_uuid)
                     df.at[i, 'invoice_key'] = invoice_uuid
                     df.at[i, 'contract_key'] = taxdoc['ДоговорКонтрагента_Key']
@@ -378,8 +380,6 @@ def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
         df_merge.drop(['doc_file_uuid'], axis=1, inplace=True)  # не удалять!!!
         df_merge = pd.merge(df_merge, pdf_files_transport_df, how='left', left_on=['ТТН_uuid'],
                             right_on=['doc_file_uuid'])
-        df_merge.drop(['doc_file_uuid', 'ТТН_uuid', 'invoice_key', 'contract_key', 'counterparty_key'], axis=1,
-                      inplace=True)
 
     else:
         df_merge = excel_df
@@ -391,6 +391,8 @@ def merge_excel_and_pdf_df(excel_df, pdf_files_df, path_excel):
     df_merge = convert_date_to_str_df(df_merge, 'Дата_реєстрації_ПН/РК_в_ЄРПН')
     df_merge = convert_date_to_str_df(df_merge, 'договорДата')
     df_merge.fillna('')
+    df_merge.drop(['doc_file_uuid', 'ТТН_uuid', 'invoice_key', 'contract_key', 'counterparty_key'], axis=1,
+                  inplace=True)
     save_as = Path(Path(path_excel).parent, Path(path_excel).stem + '_new' + Path(path_excel).suffix)
     # with pd.ExcelWriter(save_as, mode='a', if_sheet_exists='new') as writer:
     #     df_merge.to_excel(writer, sheet_name='excel_df', index=False)

@@ -49,5 +49,5 @@ def image_2_pdf(file_path, file_name):
 
 
 if __name__ == '__main__':
-    image_path_source = r"\\PRESTIGEPRODUCT\Scan\ЕСП - Copy\РН\2023.03.24"
+    image_path_source = r"C:\Users\Rasim\Desktop\111"
     cycle_on_directory_files_and_image_2_pdf(image_path_source)
